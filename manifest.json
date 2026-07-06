@@ -1,0 +1,19 @@
+{
+  "name": "Danta: Cruce del Bosque",
+  "short_name": "Danta",
+  "description": "Juego educativo de conservacion de la danta centroamericana en el corredor Tapanti-Macizo de la Muerte.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#101915",
+  "theme_color": "#1b2a24",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

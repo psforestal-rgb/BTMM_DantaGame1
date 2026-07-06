@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1b2a24">
+<meta name="description" content="Danta: Cruce del Bosque — juego educativo de conservacion de la danta centroamericana (Tapirus bairdii), corredor Tapanti-Macizo de la Muerte, Costa Rica.">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<title>Danta: Cruce del Bosque</title>
+<style>
+  :root{ --nube:#c9d6c4; --musgo:#3f6b4c; --musgo2:#2c4d38; --roble:#5b4632;
+    --sepia:#d9c6a3; --ambar:#e6a53f; --alerta:#d1553b; --agua:#5f8aa6; --noche:#141f1a; --tinta:#101915; --hueso:#f2efe4;
+    --danta-sombra-profunda:#1d1c1a; --danta-sombra:#2c2925; --danta-base:#453d37; --danta-medio:#5c5148; --danta-luz:#75685c;
+    --danta-cara-base:#6e6458; --danta-cara-luz:#918473; --danta-hocico:#9d8f7c; --danta-labio:#b2a48f;
+    --danta-oreja:#302b28; --danta-borde-oreja:#ded8c2; --danta-nariz:#181918; --danta-ojo:#101311; --danta-brillo-ojo:#f4f0dc;
+    --danta-luz-bosque:#8fa88c; --danta-luz-lluvia:#8ea8b4; --danta-luz-ambar:#e7b466; --danta-contorno:#191b18;
+    --cria-sombra-profunda:#3a281f; --cria-base:#76543c; --cria-medio:#91694b; --cria-luz:#ae8361;
+    --cria-manchas:#ddcda7; --cria-manchas-sombra:#bba982; --cria-hocico:#9c7d67; --cria-nariz:#282321; }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action:none;}
+  html,body{margin:0;padding:0;height:100%;width:100%;overflow:hidden;background:var(--tinta);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--hueso);
+    -webkit-user-select:none;user-select:none;overscroll-behavior:none;}
+  #app{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#000;}
+  #game{display:block;background:var(--noche);touch-action:none;}
+  .ui{position:absolute;inset:0;pointer-events:none;}
+  .ui > *{pointer-events:auto;}
+  .hud{position:absolute;top:calc(env(safe-area-inset-top,0px) + 6px);left:8px;right:8px;
+    display:flex;align-items:center;justify-content:space-between;gap:10px;pointer-events:none;}
+  .hud > *{pointer-events:auto;}
+  .bars{display:flex;gap:8px;align-items:center;background:rgba(16,25,21,.75);padding:6px 10px;border-radius:16px;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.06);}
+  .bar{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;}
+  .bar .lbl{font-size:14px;}
+  .track{width:52px;height:8px;border-radius:6px;background:rgba(255,255,255,.12);overflow:hidden;}
+  .fill{height:100%;width:100%;border-radius:6px;transition:width .2s ease;}
+  .hud-right{display:flex;align-items:center;gap:8px;}
+  .goalbar{background:rgba(16,25,21,.75);border-radius:16px;padding:6px 12px;display:flex;flex-direction:column;gap:1px;backdrop-filter:blur(4px);max-width:40vw;border:1px solid rgba(255,255,255,.06);}
+  .goalbar b{font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .goalbar .small{font-size:11px;color:var(--sepia);}
+  .chip{background:rgba(16,25,21,.75);border-radius:16px;padding:6px 11px;font-weight:800;font-size:14px;display:flex;flex-direction:column;align-items:center;gap:1px;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.06);}
+  .chip .small{font-size:10px;font-weight:600;color:var(--sepia);}
+  .crias-chip{display:flex;gap:5px;align-items:center;background:rgba(16,25,21,.75);border-radius:16px;padding:6px 11px;font-weight:800;font-size:14px;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.06);}
+  .iconbtn{width:42px;height:42px;border-radius:50%;border:2px solid rgba(255,255,255,.15);background:rgba(16,25,21,.75);color:var(--hueso);font-size:18px;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);transition:all .15s;}
+  .iconbtn:active{background:var(--musgo);transform:scale(.94);}
+  .pill{position:absolute;top:calc(env(safe-area-inset-top,0px) + 54px);left:50%;transform:translateX(-50%);
+    background:rgba(214,150,50,.94);color:#2a1c05;padding:8px 18px;border-radius:24px;font-weight:800;font-size:13px;
+    max-width:80vw;text-align:center;box-shadow:0 4px 18px rgba(0,0,0,.6);opacity:0;transition:opacity .3s;}
+  .pill.show{opacity:1;}
+  .action-pad{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);right:12px;display:flex;gap:10px;align-items:flex-end;pointer-events:none;}
+  .action-pad > *{pointer-events:auto;}
+  .abtn{width:62px;height:62px;border-radius:50%;border:3px solid rgba(255,255,255,.15);background:rgba(28,44,36,.85);color:var(--hueso);
+    font-size:11px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;gap:3px;
+    box-shadow:0 4px 16px rgba(0,0,0,.5);backdrop-filter:blur(3px);transition:all .15s;}
+  .abtn .ic{font-size:22px;}
+  .abtn:active{transform:scale(.92);background:var(--musgo);}
+  .abtn:disabled{opacity:.35;}
+  .dpad-wrap{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);left:12px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;pointer-events:none;}
+  .dpad-wrap > *{pointer-events:auto;}
+  .dpad-toggle{width:48px;height:48px;border-radius:14px;border:2px solid rgba(255,255,255,.15);background:rgba(16,25,21,.75);color:var(--hueso);font-size:20px;font-weight:800;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);transition:all .15s;}
+  .dpad-toggle.on{background:var(--musgo);border-color:var(--ambar);}
+  .dpad{display:none;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(3,52px);gap:6px;}
+  .dpad.show{display:grid;}
+  .dbtn{border:2px solid rgba(255,255,255,.12);background:rgba(28,44,36,.88);color:var(--hueso);font-size:24px;font-weight:800;border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,.4);transition:all .08s;}
+  .dbtn:active,.dbtn.act{background:var(--ambar);color:#2a1c05;transform:scale(.93);}
+  .dbtn.empty{background:transparent;border:none;box-shadow:none;}
+  .du{grid-column:2;grid-row:1;} .dl{grid-column:1;grid-row:2;} .dc{grid-column:2;grid-row:2;background:rgba(16,25,21,.6);font-size:14px;} .dr{grid-column:3;grid-row:2;} .dd{grid-column:2;grid-row:3;}
+  .screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:18px;gap:12px;background:linear-gradient(160deg,#16241d 0%,#0d1611 100%);overflow-y:auto;}
+  .screen.hidden{display:none;}
+  h1{font-size:clamp(24px,6vw,40px);margin:0;letter-spacing:.5px;text-shadow:0 2px 0 #0a120d, 0 0 30px rgba(63,107,76,.4);}
+  .subtitle{color:var(--sepia);font-size:14px;max-width:46ch;line-height:1.4;margin:0;}
+  .tagline{color:var(--ambar);font-style:italic;font-size:15px;margin:0;}
+  button.menu{border:none;border-radius:14px;padding:13px 24px;font-size:17px;font-weight:800;background:var(--ambar);color:#2a1c05;box-shadow:0 5px 0 #a9741f;min-width:220px;cursor:pointer;transition:all .08s;}
+  button.menu:active{transform:translateY(3px);box-shadow:0 2px 0 #a9741f;}
+  button.menu.ghost{background:transparent;color:var(--nube);border:2px solid rgba(201,214,196,.3);box-shadow:none;font-size:15px;padding:10px 20px;font-weight:700;min-width:180px;}
+  button.menu.ghost:active{transform:translateY(2px);background:rgba(63,107,76,.25);}
+  .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+  .card{background:rgba(20,32,26,.92);border:1px solid rgba(201,214,196,.12);border-radius:18px;padding:14px 18px;max-width:520px;width:100%;text-align:left;backdrop-filter:blur(4px);}
+  .opt{display:flex;justify-content:space-between;align-items:center;padding:10px 0;gap:12px;border-bottom:1px solid rgba(255,255,255,.06);}
+  .opt:last-child{border-bottom:none;}
+  .opt .desc{font-size:12px;color:var(--sepia);margin-top:2px;}
+  .toggle{width:56px;height:30px;border-radius:16px;background:rgba(255,255,255,.15);position:relative;flex:0 0 auto;border:none;}
+  .toggle .knob{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:var(--nube);transition:.16s;}
+  .toggle.on{background:var(--musgo);} .toggle.on .knob{left:29px;background:var(--ambar);}
+  .seg{display:flex;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.12);}
+  .seg button{background:transparent;color:var(--nube);border:none;padding:7px 11px;font-weight:700;font-size:13px;transition:all .1s;}
+  .seg button.sel{background:var(--musgo);color:#fff;}
+  .results-grid{display:grid;grid-template-columns:1fr auto 1fr auto;gap:5px 14px;width:100%;max-width:560px;font-size:13px;text-align:left;background:rgba(20,32,26,.92);padding:14px 18px;border-radius:18px;border:1px solid rgba(201,214,196,.08);}
+  .results-grid .k{color:var(--sepia);} .results-grid .v{font-weight:800;text-align:right;}
+  .results-grid .total{grid-column:1/5;border-top:1px solid rgba(255,255,255,.10);margin-top:4px;padding-top:6px;display:flex;justify-content:space-between;font-size:17px;font-weight:900;color:var(--ambar);}
+  .badge{display:inline-flex;align-items:center;gap:6px;background:rgba(214,150,50,.15);border:1px solid var(--ambar);color:var(--ambar);border-radius:20px;padding:5px 11px;font-size:12px;font-weight:800;margin:3px;}
+  .album-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;width:100%;max-width:560px;}
+  .album-item{background:rgba(20,32,26,.92);border-radius:14px;padding:8px 6px;font-size:11px;text-align:center;border:1px solid rgba(255,255,255,.06);}
+  .album-item.locked{opacity:.4;} .album-item .em{font-size:26px;display:block;margin-bottom:3px;}
+  .credit{position:absolute;bottom:6px;font-size:10px;color:rgba(201,214,196,.3);}
+  .flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;}
+  .rotate-hint{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(13,22,17,.97);z-index:50;text-align:center;padding:24px;}
+  .rotate-hint .rot{font-size:56px;animation:spin 2.4s ease-in-out infinite;}
+  @keyframes spin{0%,100%{transform:rotate(0)}50%{transform:rotate(90deg)}}
+  @media (orientation:portrait){ .rotate-hint{display:flex;} }
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="game" width="820" height="440"></canvas>
+  <div class="ui" id="gameUI" style="display:none">
+    <div class="hud" id="hud">
+      <div class="bars">
+        <div class="bar"><span class="lbl">&#128170;</span><div class="track"><div class="fill" id="barEnergy" style="background:linear-gradient(180deg,#a5dd7b,#6ca84d)"></div></div></div>
+        <div class="bar"><span class="lbl">&#10084;</span><div class="track"><div class="fill" id="barHealth" style="background:linear-gradient(180deg,#ff8172,#ce5048)"></div></div></div>
+        <div class="bar"><span class="lbl">&#9889;</span><div class="track"><div class="fill" id="barStress" style="background:linear-gradient(180deg,#f1c15c,#b88225);width:0%"></div></div></div>
+      </div>
+      <div class="goalbar"><b id="goalText">Objetivo</b><span class="small" id="goalSub"></span></div>
+      <div class="hud-right">
+        <div class="crias-chip" id="criasChip">&#129412; <span id="criasCount">0/0</span></div>
+        <div class="chip"><span id="scoreVal">0</span><span class="small">ISC</span></div>
+        <button class="iconbtn" id="pauseBtn" aria-label="Pausa">&#9208;</button>
+      </div>
+    </div>
+    <div class="pill" id="pill"></div>
+    <div class="dpad-wrap">
+      <button class="dpad-toggle" id="dpadToggle" aria-label="Mostrar control en cruz">&#10010;</button>
+      <div class="dpad" id="dpad">
+        <button class="dbtn du" data-dx="0" data-dy="-1" aria-label="Arriba">&#9650;</button>
+        <button class="dbtn dl" data-dx="-1" data-dy="0" aria-label="Izquierda">&#9664;</button>
+        <button class="dbtn dc" id="dpadStop" aria-label="Alto">&#9209;</button>
+        <button class="dbtn dr" data-dx="1" data-dy="0" aria-label="Derecha">&#9654;</button>
+        <button class="dbtn dd" data-dx="0" data-dy="1" aria-label="Abajo">&#9660;</button>
+      </div>
+    </div>
+    <div class="action-pad" id="actionPad">
+      <button class="abtn" id="btnLlamar"><span class="ic">&#128227;</span>Llamar</button>
+      <button class="abtn" id="btnDetener"><span class="ic">&#9995;</span>Detener</button>
+      <button class="abtn" id="btnRefugio"><span class="ic">&#127807;</span>Refugio</button>
+    </div>
+    <div class="flash" id="flash"></div>
+  </div>
+  <div class="rotate-hint"><div class="rot">&#128241;</div><div style="font-weight:800;font-size:18px;">Gira el dispositivo</div><div class="subtitle">Danta: Cruce del Bosque se juega en horizontal.</div></div>
+  <div class="screen" id="menu">
+    <h1>Danta &nbsp;<span style="font-size:.5em;color:var(--sepia);font-weight:500;">Cruce del Bosque</span></h1>
+    <p class="tagline">"Cada cruce cuenta. Cada cria, tambien."</p>
+    <p class="subtitle">Guia a Mama Danta y a sus danticas por el bosque nuboso del corredor Tapanti-Macizo de la Muerte. Cruza solo cuando sea seguro.</p>
+    <div class="row"><button class="menu" id="playBtn">Jugar</button></div>
+    <div class="row"><button class="menu ghost" id="continueBtn">Niveles</button><button class="menu ghost" id="albumBtn">Momentos de la familia</button></div>
+    <div class="row"><button class="menu ghost" id="settingsBtn">Ajustes y accesibilidad</button><button class="menu ghost" id="howBtn">Como se juega</button></div>
+    <div class="credit">Prototipo educativo &middot; Tapirus bairdii &middot; Costa Rica</div>
+  </div>
+  <div class="screen hidden" id="levels"><h1 style="font-size:26px;">Niveles</h1><div class="card" id="levelList"></div><button class="menu ghost" id="levelsBack">Volver</button></div>
+  <div class="screen hidden" id="settings"><h1 style="font-size:26px;">Ajustes</h1><div class="card" id="settingsList"></div><button class="menu ghost" id="settingsBack">Volver</button></div>
+  <div class="screen hidden" id="how"><h1 style="font-size:24px;">Como se juega</h1>
+    <div class="card" style="font-size:13px;line-height:1.55;">
+      <p>&#128072; <b>Arrastra el dedo</b> (o usa el <b>control en cruz</b> &#10010; abajo a la izquierda) para llevar a Mama Danta de izquierda a derecha.</p>
+      <p>&#127811; <b>Come plantas</b> a ambos lados para recuperar energia. Las maduras dan mas alimento y semillas.</p>
+      <p>&#128663; <b>Observa el transito.</b> Los vehiculos suben y bajan por la via. Cruza solo cuando TODO el grupo tenga tiempo.</p>
+      <p>&#128227; <b>Llamar</b> reagrupa &middot; &#9995; <b>Detener</b> congela al borde &middot; &#127807; <b>Refugio</b> esconde en vegetacion.</p>
+      <p>&#127753; Usa los <b>pasos de fauna</b> (franjas verdes que cruzan la via): el cruce es seguro y da bonificacion.</p>
+      <p>&#127919; Llega al <b>bosque protegido</b> (derecha) con la mayor cantidad de crias.</p>
+    </div>
+    <button class="menu ghost" id="howBack">Entendido</button></div>
+  <div class="screen hidden" id="album"><h1 style="font-size:24px;">Momentos de la familia</h1><p class="subtitle">Escenas que has desbloqueado protegiendo al grupo.</p><div class="album-grid" id="albumGrid"></div><button class="menu ghost" id="albumBack">Volver</button></div>
+  <div class="screen hidden" id="intro"><h1 id="introTitle" style="font-size:24px;"></h1><p class="subtitle" id="introDesc"></p><div class="card" id="introGoals" style="font-size:13px;"></div><button class="menu" id="introStart">Comenzar</button><button class="menu ghost" id="introBack">Volver al menu</button></div>
+  <div class="screen hidden" id="pause"><h1 style="font-size:28px;">Pausa</h1><button class="menu" id="resumeBtn">Continuar</button><button class="menu ghost" id="restartBtn">Reiniciar nivel</button><button class="menu ghost" id="quitBtn">Salir al menu</button></div>
+  <div class="screen hidden" id="results"><h1 id="resultTitle" style="font-size:26px;"></h1><div id="resultBadges" class="row"></div><div class="results-grid" id="resultGrid"></div><p class="subtitle" id="resultMsg" style="color:var(--ambar)"></p><div class="row"><button class="menu" id="nextBtn">Siguiente nivel</button></div><div class="row"><button class="menu ghost" id="replayBtn">Repetir nivel</button><button class="menu ghost" id="resultsMenuBtn">Menu</button></div></div>
+  <div class="screen hidden" id="gameover"><h1 style="font-size:26px;">Mama Danta necesita descansar</h1><p class="subtitle" id="gameoverMsg"></p><button class="menu" id="goRetry">Reintentar nivel</button><button class="menu ghost" id="goMenu">Menu</button></div>
+</div>
+<script>
+"use strict";
+/* DANTA: CRUCE DEL BOSQUE — rediseño 2.5D con cámara y zoom */
+const Store=(()=>{ const KEY="danta_cruce_v2"; let mem={}; let ok=true;
+  try{ const t="__t"; localStorage.setItem(t,"1"); localStorage.removeItem(t); }catch(e){ ok=false; }
+  function load(){ try{ if(ok){ const raw=localStorage.getItem(KEY); return raw?JSON.parse(raw):{}; } }catch(e){ ok=false; } return mem; }
+  function save(d){ mem=d; try{ if(ok) localStorage.setItem(KEY,JSON.stringify(d)); }catch(e){ ok=false; } }
+  return { load, save, available:()=>ok };
+})();
+const defaultState={ level:1, unlockedLevel:1, bestScores:{}, album:{}, survivors:[],
+  settings:{ sound:true, vibrate:true, childMode:false, eduMode:false, difficulty:"normal", highContrast:false, gameSpeed:1, dpad:false } };
+let persist=Object.assign({},defaultState,Store.load());
+persist.settings=Object.assign({},defaultState.settings,persist.settings||{});
+function commit(){ Store.save(persist); }
+
+const TAU=Math.PI*2;
+const clamp=(v,a,b)=> v<a?a:(v>b?b:v);
+const lerp=(a,b,t)=> a+(b-a)*t;
+const rand=(a=1,b=0)=> b+Math.random()*(a-b);
+const randInt=(a,b)=> Math.floor(rand(a,b+1));
+const pick=arr=> arr[Math.floor(Math.random()*arr.length)];
+const dist=(ax,ay,bx,by)=> Math.hypot(ax-bx,ay-by);
+const now=()=> performance.now();
+
+const canvas=document.getElementById("game"), ctx=canvas.getContext("2d");
+const W=820,H=440; canvas.width=W; canvas.height=H;
+function fitCanvas(){ const vw=window.innerWidth, vh=window.innerHeight; const s=Math.min(vw/W,vh/H);
+  canvas.style.width=Math.round(W*s)+"px"; canvas.style.height=Math.round(H*s)+"px"; }
+window.addEventListener("resize",fitCanvas); fitCanvas();
+
+/* Proyección oblicua 3/4 */
+const CW=100, CH=100;
+const ORIGIN={x:232,y:70};
+const EX={x:5.4, y:0.20};
+const EY={x:-1.2, y:3.30};
+const PDET=EX.x*EY.y - EY.x*EX.y;
+
+/* Cámara con zoom alto */
+const camera = { x: ORIGIN.x, y: ORIGIN.y, zoom: 3.2, targetX: ORIGIN.x, targetY: ORIGIN.y, targetZoom: 3.2 };
+
+function proj(gx, gy) {
+  const wx = ORIGIN.x + gx*EX.x + gy*EY.x;
+  const wy = ORIGIN.y + gx*EX.y + gy*EY.y;
+  return { x: (wx - camera.x) * camera.zoom + W/2, y: (wy - camera.y) * camera.zoom + H/2 };
+}
+function unproj(sx, sy) {
+  const wx = (sx - W/2) / camera.zoom + camera.x;
+  const wy = (sy - H/2) / camera.zoom + camera.y;
+  const dx = wx - ORIGIN.x, dy = wy - ORIGIN.y;
+  return { gx: (dx*EY.y - dy*EY.x)/PDET, gy: (dy*EX.x - dx*EX.y)/PDET };
+}
+function feetY(gx,gy){ return ORIGIN.y+gx*EX.y+gy*EY.x; }
+const GX_LEFT_END=36, GX_ROAD_A=41, GX_ROAD_B=65, GX_RIGHT_START=70;
+const LANES=[46,53,60];
+function onRoadGx(gx){ return gx>GX_ROAD_A-2 && gx<GX_ROAD_B+2; }
+function inForestGx(gx){ return gx<GX_LEFT_END || gx>GX_RIGHT_START; }
+const ROAD_PX_PER_U=Math.hypot(EX.x,EX.y);
+
+/* Audio */
+const Sound=(()=>{ let ctxA=null, master=null;
+  function ensure(){ if(ctxA) return; try{ ctxA=new (window.AudioContext||window.webkitAudioContext)(); master=ctxA.createGain(); master.gain.value=0.5; master.connect(ctxA.destination); }catch(e){ ctxA=null; } }
+  function tone(freq,dur,type="sine",vol=0.3,slideTo=null){ if(!persist.settings.sound) return; ensure(); if(!ctxA) return;
+    const o=ctxA.createOscillator(), g=ctxA.createGain(); o.type=type; o.frequency.value=freq;
+    if(slideTo) o.frequency.exponentialRampToValueAtTime(slideTo,ctxA.currentTime+dur);
+    g.gain.value=vol; g.gain.exponentialRampToValueAtTime(0.0001,ctxA.currentTime+dur);
+    o.connect(g); g.connect(master); o.start(); o.stop(ctxA.currentTime+dur); }
+  function noise(dur,vol=0.15){ if(!persist.settings.sound) return; ensure(); if(!ctxA) return;
+    const n=Math.floor(ctxA.sampleRate*dur), buf=ctxA.createBuffer(1,n,ctxA.sampleRate), d=buf.getChannelData(0);
+    for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*(1-i/n);
+    const src=ctxA.createBufferSource(); src.buffer=buf; const g=ctxA.createGain(); g.gain.value=vol; src.connect(g); g.connect(master); src.start(); }
+  return { resume(){ ensure(); if(ctxA&&ctxA.state==="suspended") ctxA.resume(); },
+    eat(){ tone(520,.12,"triangle",.2,660); }, call(){ tone(300,.25,"sine",.3,240); },
+    warn(){ tone(660,.08,"square",.25); setTimeout(()=>tone(660,.08,"square",.25),120); },
+    car(){ noise(.25,.08); }, lose(){ tone(300,.5,"sine",.3,150); }, seed(){ tone(700,.1,"triangle",.15,900); },
+    pass(){ tone(440,.15,"sine",.25,550); }, celebrate(){ [523,659,784,1046].forEach((f,i)=> setTimeout(()=>tone(f,.2,"triangle",.25),i*110)); },
+    soft(){ tone(400,.6,"sine",.18,320); } };
+})();
+function vibrate(ms){ if(persist.settings.vibrate && navigator.vibrate){ try{ navigator.vibrate(ms); }catch(e){} } }
+
+/* Personalidades */
+const PERSONALITIES={
+  curiosa:{icon:"🦋",name:"Curiosa",distract:0.9,freeze:0.1,speed:1.0,tire:1.0,panicDir:0.1,follow:0.9},
+  timida:{icon:"😨",name:"Timida",distract:0.2,freeze:0.9,speed:0.9,tire:1.0,panicDir:0.1,follow:1.0},
+  rapida:{icon:"💨",name:"Rapida",distract:0.3,freeze:0.1,speed:1.35,tire:1.1,panicDir:0.2,follow:0.7},
+  dormilona:{icon:"😴",name:"Dormilona",distract:0.3,freeze:0.3,speed:0.8,tire:1.5,panicDir:0.1,follow:0.9},
+  juguetona:{icon:"💦",name:"Juguetona",distract:0.8,freeze:0.1,speed:1.05,tire:1.1,panicDir:0.2,follow:0.8},
+  obediente:{icon:"💚",name:"Obediente",distract:0.1,freeze:0.1,speed:1.0,tire:0.9,panicDir:0.05,follow:1.3},
+  asustadiza:{icon:"🌀",name:"Asustadiza",distract:0.3,freeze:0.5,speed:1.1,tire:1.0,panicDir:0.8,follow:0.9}
+};
+const PERS_KEYS=Object.keys(PERSONALITIES);
+
+/* Niveles */
+const LEVELS=[
+  { id:1, name:"Primer cruce", desc:"Mama Danta sola. Aprende a moverte, comer y observar el transito.",
+    goals:{minCrias:0,minFood:2,minSeeds:0}, criasStart:0, criasSpawn:0,
+    traffic:{interval:3.0,speed:70,density:1,night:false,twoWay:false}, hunters:0, fog:0, rain:0, faunaPasses:1,
+    tips:["Arrastra el dedo o usa el control en cruz (+) para mover a Mama Danta.","Come 2 plantas y llega al bosque de la derecha."] },
+  { id:2, name:"La primera dantica", desc:"Aparece una cria obediente. Aprende a llamarla y a esperar antes de cruzar.",
+    goals:{minCrias:1,minFood:2,minSeeds:1}, criasStart:1, criasSpawn:0, forcePers:["obediente"],
+    traffic:{interval:2.8,speed:80,density:1,night:false,twoWay:false}, hunters:0, fog:0, rain:0, faunaPasses:1,
+    tips:["Usa Llamar para reagrupar a la cria.","Espera a que el grupo tenga tiempo de cruzar junto."] },
+  { id:3, name:"Dos pequenas exploradoras", desc:"Dos crias con caracteres distintos. Reagrupalas y usa un paso de fauna.",
+    goals:{minCrias:2,minFood:3,minSeeds:1}, criasStart:2, criasSpawn:0, forcePers:["curiosa","rapida"],
+    traffic:{interval:2.4,speed:90,density:1,night:false,twoWay:true}, hunters:0, fog:0, rain:0, faunaPasses:2,
+    tips:["Detener congela a las crias al borde de la via.","La franja verde que cruza la via es un paso de fauna."] },
+  { id:4, name:"Bosque fragmentado", desc:"Menos cobertura y mas transito. Busca refugios y protege a tres danticas.",
+    goals:{minCrias:3,minFood:3,minSeeds:2}, criasStart:3, criasSpawn:0,
+    traffic:{interval:2.0,speed:100,density:2,night:false,twoWay:true}, hunters:0, fog:0, rain:0, faunaPasses:2,
+    tips:["Refugio esconde a las crias en vegetacion densa.","Dispersa semillas comiendo frutos maduros."] },
+  { id:5, name:"Noche y neblina", desc:"Luces, camiones y cazadores. Manten al grupo unido y evita zonas abiertas.",
+    goals:{minCrias:3,minFood:2,minSeeds:1}, criasStart:3, criasSpawn:1,
+    traffic:{interval:2.2,speed:110,density:2,night:true,twoWay:true}, hunters:2, fog:0.55, rain:0, faunaPasses:2,
+    tips:["En la niebla los cazadores te ven menos.","Quedate quieto o en refugio si un cazador se acerca."] },
+  { id:6, name:"El gran corredor", desc:"Crias y juveniles. Atraviesa el corredor usando pasos de fauna y dispersa semillas.",
+    goals:{minCrias:4,minFood:3,minSeeds:3}, criasStart:4, criasSpawn:1,
+    traffic:{interval:1.7,speed:120,density:3,night:false,twoWay:true}, hunters:1, fog:0.2, rain:0.5, faunaPasses:3,
+    tips:["Planifica: que TODO el grupo cruce por el paso de fauna.","Cada cria que llega fortalece a la poblacion."] }
+];
+function diffMul(){ const d=persist.settings.difficulty;
+  if(persist.settings.childMode) return {speed:0.6,interval:1.6,hunters:0};
+  if(persist.settings.eduMode) return {speed:0.85,interval:1.3,hunters:0};
+  if(d==="suave") return {speed:0.8,interval:1.4,hunters:0.5};
+  if(d==="reto") return {speed:1.2,interval:0.8,hunters:1.3};
+  return {speed:1,interval:1,hunters:1}; }
+
+const CELEBRATIONS=[
+  {id:"orejas",em:"👂",label:"Orejas en coro"}, {id:"giro",em:"🌀",label:"Vuelta a mama"},
+  {id:"charco",em:"💦",label:"Salto al charco"}, {id:"sacudida",em:"💧",label:"Sacudida mojada"},
+  {id:"fila",em:"⬆️",label:"Hocicos al cielo"}, {id:"tropezon",em:"🍂",label:"Tropezon simpatico"},
+  {id:"asomo",em:"👀",label:"Asomo timido"}, {id:"toque",em:"💚",label:"Toque de hocico"},
+  {id:"descanso",em:"😌",label:"Descanso en familia"}, {id:"reverencia",em:"🙇",label:"Pequena reverencia"},
+  {id:"hojas",em:"🍃",label:"Juego con hojas"}
+];
+function unlockAlbum(id){ if(id && !persist.album[id]){ persist.album[id]=true; commit(); } }
+
+/* ------- REDISEÑO 2.5D: DIBUJO DE LA DANTA (MODULAR) ------- */
+function drawTapir3D(g, sx, sy, size, face, opts) {
+  opts=opts||{};
+  const calf=!!opts.calf, scared=!!opts.scared, mood=opts.mood||"neutral", pose=opts.pose||"idle";
+  const anim=opts.animTime||0, speed=opts.speed||0, wet=!!opts.wet, night=!!opts.night;
+  const s=size*0.12; // escala base (size es el multiplicador, ej: 7.0)
+  const depth=opts.depth||1;
+  const ds=0.72+depth*0.28;
+  g.save(); g.translate(sx,sy); g.scale(face*ds,ds);
+  const shadowCol="rgba(0,0,0,0.25)";
+  // 1. Sombra proyectada
+  g.save(); g.globalAlpha=0.30; g.fillStyle=shadowCol; 
+  g.beginPath(); g.ellipse(0,s*0.15,s*2.2,s*0.7,0,0,TAU); g.fill(); g.restore();
+
+  // 2. Patas traseras
+  const legCol="#1d1c1a";
+  g.fillStyle=legCol;
+  const walk=Math.sin(anim*speed);
+  const legOff=walk*0.06*s;
+  g.fillRect(-s*1.05,-s*0.5+legOff, s*0.35, s*0.6);
+  g.fillRect(-s*0.55,-s*0.48-legOff, s*0.35, s*0.58);
+
+  // 3. Cuerpo base (gradiente radial)
+  const bodyGrad=g.createRadialGradient(-s*0.3,-s*1.4,s*0.1,-s*0.15,-s*0.85,s*1.8);
+  bodyGrad.addColorStop(0, "#75685c");
+  bodyGrad.addColorStop(0.3, "#5c5148");
+  bodyGrad.addColorStop(0.65, "#453d37");
+  bodyGrad.addColorStop(1, "#24211e");
+  g.fillStyle=bodyGrad;
+  g.beginPath(); g.ellipse(-s*0.1,-s*0.95,s*1.2,s*0.85,-0.06,0,TAU); g.fill();
+
+  // 4. Sombra inferior (vientre)
+  const bellyGrad=g.createRadialGradient(-s*0.1,-s*0.6,s*0.05,-s*0.1,-s*0.35,s*1.2);
+  bellyGrad.addColorStop(0,"rgba(20,18,16,0)");
+  bellyGrad.addColorStop(0.6,"rgba(20,18,16,0.2)");
+  bellyGrad.addColorStop(1,"rgba(14,13,12,0.55)");
+  g.fillStyle=bellyGrad; g.beginPath(); g.ellipse(-s*0.1,-s*0.55,s*1.1,s*0.6,0,0,TAU); g.fill();
+
+  // 5. Grupa (luz)
+  g.fillStyle="#6b6157"; g.beginPath(); g.ellipse(-s*0.85,-s*0.95,s*0.5,s*0.65,0,0,TAU); g.fill();
+
+  // 6. Cuello y cabeza (gradiente)
+  const headGrad=g.createRadialGradient(s*0.8,-s*1.2,s*0.1,s*0.95,-s*1.15,s*0.6);
+  headGrad.addColorStop(0,"#918473"); headGrad.addColorStop(0.5,"#6e6458"); headGrad.addColorStop(1,"#4a413b");
+  g.fillStyle=headGrad;
+  g.beginPath(); g.ellipse(s*0.95,-s*1.15,s*0.5,s*0.48,0.2,0,TAU); g.fill();
+
+  // 7. Trompa (carnosa)
+  const trunkOff=(mood==="curiosa"?-0.05*s:(mood==="asustada"?0.05*s:0));
+  g.fillStyle="#9d8f7c";
+  g.beginPath(); g.moveTo(s*1.25,-s*1.25+trunkOff);
+  g.quadraticCurveTo(s*1.65,-s*1.2+trunkOff*0.7,s*1.6,-s*0.9+trunkOff*0.4);
+  g.quadraticCurveTo(s*1.5,-s*0.85+trunkOff*0.3,s*1.3,-s*1.0+trunkOff*0.2); g.closePath(); g.fill();
+  // nariz
+  g.fillStyle="#181918"; g.beginPath(); g.arc(s*1.55,-s*0.88+trunkOff*0.2,s*0.06,0,TAU); g.fill();
+  g.fillStyle="rgba(20,20,20,0.2)"; g.beginPath(); g.arc(s*1.45,-s*0.92+trunkOff*0.2,s*0.04,0,TAU); g.fill();
+
+  // 8. Patas delanteras
+  g.fillStyle=legCol;
+  const legOff2=-walk*0.06*s;
+  g.fillRect(s*0.35,-s*0.5+legOff2, s*0.32, s*0.58);
+  g.fillRect(s*0.70,-s*0.46-legOff2, s*0.32, s*0.54);
+  // pezuñas
+  g.fillStyle="#2a2622"; g.fillRect(s*0.35,-s*0.02+legOff2, s*0.15, s*0.08);
+  g.fillRect(s*0.70,-s*0.0-legOff2, s*0.15, s*0.08);
+
+  // 9. Oreja posterior
+  const earDrop=(mood==="asustada"?0.15*s:(mood==="feliz"?-0.1*s:0));
+  g.fillStyle="#302b28";
+  g.beginPath(); g.ellipse(s*0.72,-s*1.5+earDrop,s*0.16,s*0.28,-0.2,0,TAU); g.fill();
+  g.fillStyle="#ded8c2"; g.beginPath(); g.ellipse(s*0.72,-s*1.62+earDrop,s*0.09,s*0.14,-0.2,0,TAU); g.fill();
+
+  // 10. Oreja frontal
+  g.fillStyle="#302b28";
+  g.beginPath(); g.ellipse(s*1.0,-s*1.45+earDrop,s*0.18,s*0.30,0.15,0,TAU); g.fill();
+  g.fillStyle="#ded8c2"; g.beginPath(); g.ellipse(s*1.0,-s*1.58+earDrop,s*0.10,s*0.16,0.15,0,TAU); g.fill();
+
+  // 11. Ojo (lateral, expresivo)
+  const eyeOpen=(mood==="asustada"||scared)?1:(mood==="feliz"?0.6:0.8);
+  const eyeYOff=(mood==="feliz"?-0.04*s:0);
+  g.fillStyle="#101311"; g.beginPath(); g.ellipse(s*1.02,-s*1.18+eyeYOff,s*0.09*eyeOpen,s*0.07*eyeOpen,0,0,TAU); g.fill();
+  g.fillStyle="#f4f0dc"; g.beginPath(); g.arc(s*1.04,-s*1.20+eyeYOff,s*0.025,0,TAU); g.fill();
+  // párpado superior
+  g.strokeStyle="#1d1c1a"; g.lineWidth=s*0.03; g.beginPath(); g.arc(s*1.02,-s*1.18+eyeYOff,s*0.09*eyeOpen,-Math.PI,0); g.stroke();
+
+  // 12. Boca (sutil)
+  if(mood!=="asustada"){ g.strokeStyle="#1d1c1a"; g.lineWidth=s*0.02; g.beginPath(); g.arc(s*1.3,-s*0.95+trunkOff*0.2,s*0.08,0.1,0.5); g.stroke(); }
+
+  // 13. Marcas de cría (si es calf)
+  if(calf){
+    // Franjas crema longitudinales
+    g.fillStyle="rgba(221,205,167,0.7)";
+    for(let i=0;i<5;i++){ const ux=-s*1.0+i*s*0.4, uy=-s*0.95+((i%2)?-s*0.3:s*0.25); g.beginPath(); g.ellipse(ux,uy,s*0.12,s*0.22,0.3,0,TAU); g.fill(); }
+    // Manchas laterales
+    g.fillStyle="rgba(187,169,130,0.5)";
+    for(let i=0;i<6;i++){ const a=i*1.2+0.5; g.beginPath(); g.arc(-s*0.5+Math.cos(a)*s*0.5,-s*0.9+Math.sin(a)*s*0.5,s*0.08,0,TAU); g.fill(); }
+  }
+
+  // 14. Oclusión ambiental bajo cuello y mandíbula
+  g.fillStyle="rgba(0,0,0,0.15)"; g.beginPath(); g.ellipse(s*0.9,-s*0.9,s*0.25,s*0.15,0.2,0,TAU); g.fill();
+
+  // 15. Luz de borde (rim light)
+  const rimCol=night?"rgba(90,120,130,0.3)":"rgba(200,220,190,0.25)";
+  g.strokeStyle=rimCol; g.lineWidth=s*0.05;
+  g.beginPath(); g.arc(-s*0.85,-s*0.95,s*0.45, -0.5,0.5); g.stroke();
+  g.beginPath(); g.arc(s*0.95,-s*1.15,s*0.4, 0.2,1.0); g.stroke();
+
+  // 16. Reflejos de humedad (si está mojado)
+  if(wet){
+    g.fillStyle="rgba(255,255,255,0.08)"; g.beginPath(); g.ellipse(-s*0.3,-s*1.3,s*0.3,s*0.1,0.2,0,TAU); g.fill();
+    g.fillStyle="rgba(255,255,255,0.05)"; g.beginPath(); g.ellipse(-s*0.6,-s*1.1,s*0.2,s*0.06,0,0,TAU); g.fill();
+  }
+
+  // 17. Contorno cómic variable
+  g.strokeStyle="#191b18"; g.lineWidth=s*0.055; g.lineJoin="round"; g.lineCap="round";
+  g.strokeStyle="rgba(25,27,24,0.75)"; 
+  // contorno parcial: cuerpo, cabeza
+  g.beginPath(); g.moveTo(-s*1.0,-s*0.5); g.quadraticCurveTo(-s*1.2,-s*0.8,-s*0.9,-s*1.1);
+  g.quadraticCurveTo(-s*0.6,-s*1.4,0,-s*1.5);
+  g.quadraticCurveTo(s*0.6,-s*1.5,s*0.95,-s*1.3);
+  g.quadraticCurveTo(s*1.3,-s*1.1,s*1.4,-s*0.8);
+  g.quadraticCurveTo(s*1.3,-s*0.5,s*1.1,-s*0.4);
+  g.stroke();
+  // contorno de patas
+  g.lineWidth=s*0.045;
+  g.strokeRect(s*0.35,-s*0.5,s*0.32,s*0.58);
+  g.strokeRect(s*0.70,-s*0.46,s*0.32,s*0.54);
+  g.strokeRect(-s*1.05,-s*0.5,s*0.35,s*0.6);
+  g.strokeRect(-s*0.55,-s*0.48,s*0.35,s*0.58);
+
+  g.restore();
+}
+
+/* ------- CLASES ------- */
+class Danta{
+  constructor(gx,gy){ this.gx=gx;this.gy=gy;this.vx=0;this.vy=0;this.r=3.4;this.face=1;
+    this.tx=gx;this.ty=gy;this.baseSpeed=20;this.walk=false;this.dash=0;
+    this.energy=100;this.health=100;this.stress=0;this.eating=0;this.protectCd=0;this.trail=[];this.shake=0;this.mood="neutral";this.wet=false;this.anim=0; }
+  setTargetWorld(gx,gy){ this.tx=clamp(gx,2,98); this.ty=clamp(gy,4,96); }
+  update(dt){
+    const dx=this.tx-this.gx, dy=this.ty-this.gy, d=Math.hypot(dx,dy);
+    let sp=this.baseSpeed; if(this.walk) sp*=0.45; if(this.dash>0){ sp*=1.9; this.dash-=dt; }
+    if(this.energy<25) sp*=0.75; sp*=(1-Math.min(0.35, criasFollowing()*0.05));
+    if(d>0.4){ const ux=dx/d,uy=dy/d; this.vx=lerp(this.vx,ux*sp,0.14); this.vy=lerp(this.vy,uy*sp,0.14);
+      if(Math.abs(this.vx)>0.6) this.face=this.vx>0?1:-1; } else { this.vx*=0.8; this.vy*=0.8; }
+    this.gx=clamp(this.gx+this.vx*dt,2,98); this.gy=clamp(this.gy+this.vy*dt,4,96);
+    if(this.trail.length===0 || dist(this.gx,this.gy,this.trail[0].gx,this.trail[0].gy)>0.9){ this.trail.unshift({gx:this.gx,gy:this.gy}); if(this.trail.length>160) this.trail.pop(); }
+    const moving=Math.hypot(this.vx,this.vy);
+    this.energy=clamp(this.energy-dt*(1.1+moving*0.03),0,100);
+    const onRoad=onRoadGx(this.gx), inForest=inForestGx(this.gx);
+    this.stress=clamp(this.stress+dt*(onRoad?7:(inForest?-9:-3)),0,100);
+    if(this.energy<=0) this.health=clamp(this.health-dt*4,0,100);
+    if(this.protectCd>0) this.protectCd-=dt; if(this.shake>0) this.shake-=dt; if(this.eating>0) this.eating-=dt;
+    if(moving>0.5) this.anim+=dt*2; else this.anim=0;
+    this.mood=this.stress>70?"asustada":(this.energy<25?"cansada":"neutral");
+    if(this.eating>0) this.mood="comiendo";
+    if(this.protectCd>0) this.mood="protectora";
+    if(world&&world.night) this.wet=true; else this.wet=false;
+  }
+  feet(){ return feetY(this.gx,this.gy); }
+  draw(g){ const p=proj(this.gx,this.gy); const sh=(this.shake>0?Math.sin(now()/30)*2:0);
+    drawShadow(g,this.gx,this.gy,this.r);
+    drawTapir3D(g,p.x+sh,p.y,this.r*7.0,this.face,{calf:false,scared:this.stress>70,mood:this.mood,pose:this.walk?"walking":"idle",animTime:this.anim,speed:this.vx?2:0,wet:this.wet,night:world?world.night:false,depth:1}); }
+}
+
+class Dantica{
+  constructor(persKey,stage=0){ this.pers=PERSONALITIES[persKey]; this.persKey=persKey; this.stage=stage;
+    this.gx=0;this.gy=0;this.vx=0;this.vy=0;this.face=1; this.r=2.2+stage*0.5;
+    this.state="follow"; this.energy=90; this.scared=0; this.rezagadaT=0; this.lost=false; this.safe=false;
+    this.exhaust=0; this.distract=0; this.hurtGrace=0; this.levelsSurvived=0; this.faunaUses=0;
+    this.noDamage=true; this.name=null; this.wob=rand(TAU); this.rank=0; this._wasOnRoad=false; this.mood="neutral"; this.anim=0; }
+  speedBase(){ return (14+this.stage*1.8)*this.pers.speed; }
+  feet(){ return feetY(this.gx,this.gy); }
+  update(dt,mama,rankIndex){
+    if(this.lost) return; this.rank=rankIndex; if(this.hurtGrace>0) this.hurtGrace-=dt;
+    const idx=Math.min(mama.trail.length-1, 8+rankIndex*7);
+    const tp=mama.trail[idx]||{gx:mama.gx-4,gy:mama.gy};
+    let carNear=null,carDist=1e9; for(const v of world.vehicles){ const d=dist(this.gx,this.gy,v.gx,v.gy); if(d<carDist){carDist=d;carNear=v;} }
+    let hunterNear=null,hDist=1e9; for(const hnt of world.hunters){ const d=dist(this.gx,this.gy,hnt.gx,hnt.gy); if(d<hDist){hDist=d;hunterNear=hnt;} }
+    const onRoad=onRoadGx(this.gx); const nearCover=coverNear(this.gx,this.gy);
+    if(world.stopOrder){ this.state="wait"; }
+    else if(hunterNear && hDist<22 && !world.fogActive){ this.state=nearCover?"hide":"flee"; this.scared=1.2; }
+    else if(carNear && carDist<16 && onRoad){ this.scared=1.0; this.state=(Math.random()<this.pers.freeze)?"freeze":"flee"; }
+    else if(this.energy<30 && !onRoad){ this.state="eat"; }
+    else { if(!onRoad && Math.random()<this.pers.distract*dt*0.4 && this.distract<=0) this.distract=rand(1.6,0.6); this.state=(this.distract>0)?"play":"follow"; }
+    const dm=dist(this.gx,this.gy,mama.gx,mama.gy); const safeDist=12+rankIndex*3.4;
+    if(dm>safeDist && this.state==="follow") this.rezagadaT+=dt; else if(this.state==="follow") this.rezagadaT=Math.max(0,this.rezagadaT-dt*1.5);
+    if(this.rezagadaT>9){ loseDantica(this,"separacion"); return; }
+    let goalX=tp.gx, goalY=tp.gy, sp=this.speedBase();
+    switch(this.state){
+      case "wait": case "freeze": sp=0; break;
+      case "flee": { const th=(hunterNear&&hDist<22)?hunterNear:carNear;
+        if(th){ const a=Math.atan2(this.gy-th.gy,this.gx-th.gx); goalX=this.gx+Math.cos(a)*10; goalY=this.gy+Math.sin(a)*10;
+          if(this.pers.panicDir>Math.random()){ goalX=this.gx-Math.cos(a)*10; } } sp*=1.3; break; }
+      case "hide": { const c=nearestCover(this.gx,this.gy); if(c){goalX=c.gx;goalY=c.gy;} sp*=1.1; break; }
+      case "eat": { const p=nearestPlant(this.gx,this.gy,true); if(p){ goalX=p.gx; goalY=p.gy; if(dist(this.gx,this.gy,p.gx,p.gy)<p.r+1.5){ p.nibble(dt); this.energy=clamp(this.energy+dt*14,0,100); } } break; }
+      case "play": { this.distract-=dt; goalX=tp.gx+Math.sin(this.wob+now()/400)*3.6; goalY=tp.gy+Math.cos(this.wob+now()/500)*2.4; sp*=0.6; break; }
+      default: sp*=this.pers.follow;
+    }
+    this.energy=clamp(this.energy-dt*(0.7*this.pers.tire),0,100);
+    if(this.energy<=0){ this.exhaust+=dt; if(this.exhaust>7){ loseDantica(this,"agotamiento"); return; } } else this.exhaust=Math.max(0,this.exhaust-dt);
+    if(this.energy<25) sp*=0.7; if(this.scared>0) this.scared-=dt;
+    const gdx=goalX-this.gx, gdy=goalY-this.gy, gd=Math.hypot(gdx,gdy);
+    if(sp>0 && gd>0.3){ const ux=gdx/gd,uy=gdy/gd; this.vx=lerp(this.vx,ux*sp,0.2); this.vy=lerp(this.vy,uy*sp,0.2); if(Math.abs(this.vx)>0.4) this.face=this.vx>0?1:-1; }
+    else { this.vx*=0.7; this.vy*=0.7; }
+    this.gx=clamp(this.gx+this.vx*dt,1,99); this.gy=clamp(this.gy+this.vy*dt,3,97);
+    this.safe=this.gx>GX_RIGHT_START;
+    if(onRoad && this.hurtGrace<=0){ for(const v of world.vehicles){
+      if(Math.abs(this.gx-v.gx)<v.hw+this.r && Math.abs(this.gy-v.gy)<v.hl+this.r && !inFaunaPass(this.gy)){
+        if(mama.protectCd>0 && dist(this.gx,this.gy,mama.gx,mama.gy)<6){ } else { loseDantica(this,"atropello"); return; } } } }
+    if(hunterNear && hDist<4.5 && this.hurtGrace<=0 && !nearCover){ loseDantica(this,"cazador"); return; }
+    for(const t of world.traps){ if(!t.sprung && dist(this.gx,this.gy,t.gx,t.gy)<t.r+this.r){ t.sprung=true; loseDantica(this,"trampa"); return; } }
+    this.mood=this.scared>0?"asustada":(this.state==="play"?"feliz":"neutral");
+    if(Math.hypot(this.vx,this.vy)>0.5) this.anim+=dt*2; else this.anim=0;
+  }
+  draw(g){ if(this.lost) return; const p=proj(this.gx,this.gy);
+    drawShadow(g,this.gx,this.gy,this.r);
+    drawTapir3D(g,p.x,p.y,this.r*7.0,this.face,{calf:true,scared:this.scared>0,mood:this.mood,pose:this.state==="play"?"play":"idle",animTime:this.anim,speed:this.vx?2:0,wet:world?world.night:false,night:world?world.night:false,depth:0.8});
+    g.save(); g.globalAlpha=0.92; g.font="11px system-ui"; g.textAlign="center"; g.fillText(this.pers.icon,p.x,p.y-this.r*7.0*0.12*1.9); g.restore(); }
+}
+
+class Vehicle{
+  constructor(dir,lane,speed,kind){ this.dir=dir; this.kind=kind; this.gx=lane;
+    this.hl=(kind==="camion"?6.5:(kind==="bus"?5.6:(kind==="moto"?2.6:4.0)));
+    this.hw=(kind==="moto"?1.6:2.6);
+    this.hz=(kind==="camion"?26:(kind==="bus"?24:(kind==="moto"?12:16)));
+    this.gy=dir>0?-8:108; this.speed=speed*(kind==="camion"?0.8:(kind==="moto"?1.25:1)); this.curSpeed=this.speed; this.slowing=false;
+    this.color=kind==="bus"?"#c9a24a":(kind==="camion"?"#8a6b4a":(kind==="moto"?"#b8543b":pick(["#4a6b8a","#7a8a4a","#8a4a6b","#5a5a6a"]))); this.night=world.night; }
+  update(dt){ let target=this.speed; const fauna=world.faunaGy.some(fy=> Math.abs(this.gy-fy)<7);
+    const ahead=this.dir>0?(a)=> a.gy>this.gy-2 && a.gy<this.gy+22 : (a)=> a.gy<this.gy+2 && a.gy>this.gy-22;
+    let dantaAhead=Math.abs(world.mama.gx-this.gx)<3.4 && ahead(world.mama);
+    for(const c of world.crias){ if(!c.lost && Math.abs(c.gx-this.gx)<3.2 && ahead(c)) dantaAhead=true; }
+    if((dantaAhead && Math.random()<world.driverCare) || fauna){ target=this.speed*0.22; this.slowing=true; } else this.slowing=false;
+    this.curSpeed=lerp(this.curSpeed,target,0.08); this.gy+=this.dir*this.curSpeed*dt; }
+  offscreen(){ return this.dir>0?this.gy>110:this.gy<-10; }
+  feet(){ return feetY(this.gx,this.gy); }
+  draw(g){
+    const box=obox(g,this.gx,this.gy,this.hw,this.hl,this.hz,this.color,shade(this.color,0.62));
+    const nose=proj(this.gx,this.gy+this.dir*this.hl); const nt={x:nose.x,y:nose.y-this.hz*0.5};
+    if(this.night){ g.save(); const grd=g.createRadialGradient(nt.x,nt.y,2,nt.x,nt.y,60); grd.addColorStop(0,"rgba(255,240,180,.55)"); grd.addColorStop(1,"rgba(255,240,180,0)");
+      g.fillStyle=grd; g.beginPath(); g.arc(nt.x,nt.y+this.dir*20,44,0,TAU); g.fill(); g.restore();
+      g.fillStyle="#fff3c0"; g.beginPath(); g.arc(nt.x,nt.y,2.5,0,TAU); g.fill(); }
+    if(this.slowing){ const tail=proj(this.gx,this.gy-this.dir*this.hl); g.fillStyle="#ff5a3c"; g.beginPath(); g.arc(tail.x,tail.y-this.hz*0.5,3,0,TAU); g.fill(); } }
+}
+function obox(g, gx, gy, hw, hl, hz, topCol, sideCol){
+  const c=[ proj(gx-hw,gy-hl), proj(gx+hw,gy-hl), proj(gx+hw,gy+hl), proj(gx-hw,gy+hl) ];
+  g.save(); g.globalAlpha=0.25; g.fillStyle="#000"; g.beginPath();
+  g.moveTo(c[0].x,c[0].y); for(let i=1;i<4;i++) g.lineTo(c[i].x,c[i].y); g.closePath(); g.fill(); g.restore();
+  const t=c.map(p=>({x:p.x,y:p.y-hz}));
+  g.fillStyle=sideCol;
+  g.beginPath(); g.moveTo(c[2].x,c[2].y); g.lineTo(c[3].x,c[3].y); g.lineTo(t[3].x,t[3].y); g.lineTo(t[2].x,t[2].y); g.closePath(); g.fill();
+  g.beginPath(); g.moveTo(c[1].x,c[1].y); g.lineTo(c[2].x,c[2].y); g.lineTo(t[2].x,t[2].y); g.lineTo(t[1].x,t[1].y); g.closePath(); g.fill();
+  g.fillStyle=topCol; g.beginPath(); g.moveTo(t[0].x,t[0].y); for(let i=1;i<4;i++) g.lineTo(t[i].x,t[i].y); g.closePath(); g.fill();
+  return {c,t};
+}
+function shade(hex,f){ const n=parseInt(hex.slice(1),16); let r=(n>>16)&255,gg=(n>>8)&255,b=n&255;
+  r=Math.round(r*f); gg=Math.round(gg*f); b=Math.round(b*f); return "rgb("+r+","+gg+","+b+")"; }
+
+class Plant{
+  constructor(gx,gy,fruity=false){ this.gx=gx;this.gy=gy;this.stage=randInt(0,2);this.grow=rand(3,0); this.fruity=fruity;this.r=2.4;this.consumed=0;this.rot=rand(TAU); }
+  update(dt){ this.grow+=dt; const need=[2.5,3,4,5][this.stage]||99; if(this.stage<4 && this.grow>need){ this.stage++; this.grow=0; } this.r=1.6+this.stage*0.5; }
+  ripe(){ return this.stage>=3; }
+  nibble(dt){ const gain=[3,6,9,14,16][this.stage]; this.consumed+=dt;
+    if(this.consumed>0.9){ this.consumed=0; const wasRipe=this.ripe(); this.stage=Math.max(1,this.stage-1);
+      if(this.fruity && wasRipe && world.spawnSeedFrom) world.spawnSeedFrom(this); return gain; } return 0; }
+  feet(){ return feetY(this.gx,this.gy); }
+  draw(g){ const p=proj(this.gx,this.gy); const h=6+this.stage*7; drawShadow(g,this.gx,this.gy,this.r*0.8);
+    g.strokeStyle="#4a3b26"; g.lineWidth=2; g.beginPath(); g.moveTo(p.x,p.y); g.lineTo(p.x,p.y-h*0.5); g.stroke();
+    const col=this.fruity&&this.stage>=3?"#3f7f4a":["#6b5a3a","#4a7a4a","#3f8f4f","#3f9f5f","#3f9f5f"][this.stage];
+    g.fillStyle=col;
+    for(let i=0;i<3;i++){ g.beginPath(); g.arc(p.x+(i-1)*this.r*2.2, p.y-h+(i===1?-3:0), this.r*2.4+2,0,TAU); g.fill(); }
+    if(this.fruity&&this.stage>=3){ g.fillStyle="#e6702f"; for(let i=0;i<4;i++){ g.beginPath(); g.arc(p.x+Math.cos(i*1.7+this.rot)*this.r*2, p.y-h+Math.sin(i*1.7+this.rot)*this.r*2,2.6,0,TAU); g.fill(); } } }
+}
+
+class Seed{ constructor(gx,gy){ const p=proj(gx,gy); this.x=p.x;this.y=p.y-14;this.t=1.4;this.vx=rand(20,-20);this.vy=rand(-10,-50); }
+  update(dt){ this.t-=dt; this.x+=this.vx*dt; this.y+=this.vy*dt; this.vy+=90*dt; }
+  draw(g){ g.fillStyle="#d9c6a3"; g.globalAlpha=clamp(this.t,0,1); g.beginPath(); g.arc(this.x,this.y,3,0,TAU); g.fill(); g.globalAlpha=1; } }
+
+class Hunter{ constructor(gx,gy){ this.gx=gx;this.gy=gy;this.vy=rand(6,-6);this.state="patrol"; }
+  update(dt){ const dm=dist(this.gx,this.gy,world.mama.gx,world.mama.gy); const visible=!world.fogActive && dm<30 && !coverNear(world.mama.gx,world.mama.gy);
+    if(visible){ this.state="track"; const a=Math.atan2(world.mama.gy-this.gy,world.mama.gx-this.gx); this.gx+=Math.cos(a)*5*dt; this.gy+=Math.sin(a)*5*dt; world.mama.stress=clamp(world.mama.stress+dt*4,0,100); }
+    else { this.state="patrol"; this.gy+=this.vy*dt; if(this.gy<6||this.gy>94) this.vy*=-1; }
+    this.gx=clamp(this.gx,2,GX_LEFT_END-2); }
+  feet(){ return feetY(this.gx,this.gy); }
+  draw(g){ const p=proj(this.gx,this.gy); drawShadow(g,this.gx,this.gy,1.6); g.save(); g.globalAlpha=world.fogActive?0.4:1;
+    g.fillStyle="#2a2a2a"; g.fillRect(p.x-6,p.y-30,12,24); g.beginPath(); g.arc(p.x,p.y-34,6,0,TAU); g.fill();
+    if(this.state==="track"){ g.fillStyle="#d1553b"; g.font="bold 14px system-ui"; g.textAlign="center"; g.fillText("!",p.x,p.y-44); } g.restore(); } }
+
+class Trap{ constructor(gx,gy){ this.gx=gx;this.gy=gy;this.r=2.2;this.sprung=false; }
+  feet(){ return feetY(this.gx,this.gy); }
+  draw(g){ if(this.sprung) return; const p=proj(this.gx,this.gy); g.strokeStyle="rgba(180,120,60,.55)"; g.lineWidth=2;
+    g.beginPath(); g.ellipse(p.x,p.y,this.r*ROAD_PX_PER_U,this.r*ROAD_PX_PER_U*0.5,0,0,TAU); g.stroke(); } }
+
+class Cover{ constructor(gx,gy,r){ this.gx=gx;this.gy=gy;this.r=r; }
+  feet(){ return feetY(this.gx,this.gy); }
+  draw(g){ const p=proj(this.gx,this.gy); drawShadow(g,this.gx,this.gy,this.r); const h=this.r*7;
+    g.fillStyle="rgba(30,58,40,.95)"; for(let i=0;i<5;i++){ const a=i/5*TAU; g.beginPath(); g.arc(p.x+Math.cos(a)*this.r*3, p.y-h*0.4+Math.sin(a)*this.r*2,this.r*3.2,0,TAU); g.fill(); }
+    g.fillStyle="rgba(46,84,56,.98)"; g.beginPath(); g.arc(p.x,p.y-h*0.5,this.r*3.6,0,TAU); g.fill(); } }
+
+class Water{ constructor(gx,gy){ this.gx=gx;this.gy=gy;this.r=4.5; }
+  feet(){ return feetY(this.gx,this.gy)-999; }
+  draw(g){ const p=proj(this.gx,this.gy); g.fillStyle="rgba(95,138,166,.85)"; g.beginPath(); g.ellipse(p.x,p.y,this.r*ROAD_PX_PER_U,this.r*ROAD_PX_PER_U*0.5,0,0,TAU); g.fill();
+    g.strokeStyle="rgba(200,230,240,.4)"; g.lineWidth=1.5; g.beginPath(); g.ellipse(p.x,p.y,this.r*ROAD_PX_PER_U*0.6,this.r*ROAD_PX_PER_U*0.3,0,0,TAU); g.stroke(); } }
+
+/* ------- MUNDO ------- */
+let world=null;
+const GS={MENU:"menu",INTRO:"intro",PLAY:"play",PAUSE:"pause",RESULT:"result",GAMEOVER:"gameover"};
+let gameState=GS.MENU;
+function criasFollowing(){ return world?world.crias.filter(c=>!c.lost).length:0; }
+function coverNear(gx,gy){ return world.covers.some(c=> dist(gx,gy,c.gx,c.gy)<c.r+2.5); }
+function nearestCover(gx,gy){ let b=null,bd=1e9; for(const c of world.covers){ const d=dist(gx,gy,c.gx,c.gy); if(d<bd){bd=d;b=c;} } return b; }
+function nearestPlant(gx,gy,edible){ let b=null,bd=1e9; for(const p of world.plants){ if(edible&&p.stage<1) continue; const d=dist(gx,gy,p.gx,p.gy); if(d<bd){bd=d;b=p;} } return b; }
+function inFaunaPass(gy){ return world.faunaGy.some(fy=> Math.abs(gy-fy)<7); }
+
+function buildLevel(levelIdx){
+  const L=LEVELS[levelIdx-1], dm=diffMul();
+  world={ level:L, night:L.traffic.night, driverCare:L.traffic.night?0.35:0.6,
+    mama:new Danta(8,50), crias:[], vehicles:[], plants:[], seeds:[], hunters:[], traps:[], covers:[], waters:[],
+    faunaGy:[], elapsed:0, stopOrder:false, fogActive:false, fog:L.fog||0, rain:L.rain||0,
+    stats:{foodEaten:0,seedsDispersed:0,safeCrossings:0,faunaUses:0,criasLost:0,cleanCrossing:true,criasRescued:0,grew:0},
+    done:false, spawnCriaCd:12, spawnedExtra:0, scoreVal:0, spawnSeedFrom:null,
+    trafficInterval:0, trafficSpeed:0, trafficDensity:1, twoWay:false, trafficTimer:1.5, goals:L.goals, startSurvivors:0 };
+  const mama=world.mama;
+  const nPass=L.faunaPasses; for(let i=0;i<nPass;i++) world.faunaGy.push(100*(i+1)/(nPass+1));
+  for(let i=0;i<7;i++) world.covers.push(new Cover(rand(GX_LEFT_END-4,4),rand(92,8),rand(2.4,1.4)));
+  for(let i=0;i<7;i++) world.covers.push(new Cover(rand(96,GX_RIGHT_START+4),rand(92,8),rand(2.4,1.4)));
+  if(L.id>=4) world.covers=world.covers.filter((_,i)=> i%2===0);
+  world.waters.push(new Water(rand(30,10),rand(80,20)));
+  world.waters.push(new Water(rand(90,74),rand(80,20)));
+  const nPlants=8+L.id;
+  for(let i=0;i<nPlants;i++){ const left=Math.random()<0.5; const gx=left?rand(GX_LEFT_END-3,4):rand(96,GX_RIGHT_START+3); world.plants.push(new Plant(gx,rand(92,8),Math.random()<0.5)); }
+  let startCrias=[];
+  if(persist.survivors.length>0 && levelIdx>1){ startCrias=persist.survivors.map(s=>{ const c=new Dantica(s.persKey,s.stage); c.levelsSurvived=s.levelsSurvived||0; c.faunaUses=s.faunaUses||0; c.name=s.name||null; return c; }); }
+  const total=Math.max(L.criasStart, startCrias.length);
+  for(let i=0;i<total;i++){ let c=startCrias[i];
+    if(!c){ const pk=(L.forcePers && L.forcePers[i])?L.forcePers[i]:pick(PERS_KEYS); c=new Dantica(pk,0); }
+    c.gx=mama.gx-3-i*1.4; c.gy=mama.gy+Math.cos(i*1.7)*5; world.crias.push(c); }
+  world.startSurvivors=world.crias.length;
+  const nH=Math.round((L.hunters||0)*dm.hunters);
+  for(let i=0;i<nH;i++) world.hunters.push(new Hunter(rand(GX_LEFT_END-4,4),rand(90,10)));
+  if(L.id>=5){ for(let i=0;i<2;i++) world.traps.push(new Trap(rand(GX_RIGHT_START-1,GX_ROAD_B+1),rand(90,10))); }
+  world.trafficInterval=L.traffic.interval*(1/dm.interval);
+  world.trafficSpeed=L.traffic.speed*0.30*dm.speed;
+  world.trafficDensity=L.traffic.density; world.twoWay=L.traffic.twoWay;
+  world.spawnSeedFrom=function(plant){ world.seeds.push(new Seed(plant.gx,plant.gy)); world.stats.seedsDispersed++; score(5); Sound.seed(); showFloating("🌱",proj(plant.gx,plant.gy).x,proj(plant.gx,plant.gy).y-16);
+    if(Math.random()<0.6){ const left=plant.gx<50; const gx=left?rand(GX_LEFT_END-3,4):rand(96,GX_RIGHT_START+3); world.plants.push(new Plant(gx,clamp(plant.gy+rand(10,-10),6,94),Math.random()<0.5)); } };
+}
+function spawnVehicle(){ const lane=pick(LANES); let dir=1; if(world.twoWay) dir=Math.random()<0.5?1:-1;
+  const kinds=world.night?["auto","camion","bus","moto"]:["auto","auto","moto","bus","camion"];
+  world.vehicles.push(new Vehicle(dir,lane+rand(1.2,-1.2),world.trafficSpeed*rand(1.15,0.85),pick(kinds))); }
+
+const LOSS_MESSAGES={
+  atropello:"Las crias necesitan mas tiempo para cruzar. Reducir la velocidad salva vidas.",
+  cazador:"La caza ilegal amenaza a adultos y crias. Refugiate en la vegetacion densa.",
+  trampa:"Las trampas son un peligro oculto. Los patrullajes ayudan a retirarlas.",
+  separacion:"Las crias siguen a su madre. Reagrupalas antes de avanzar.",
+  agotamiento:"Una cria con hambre se detiene. Guiala hasta plantas seguras."
+};
+function loseDantica(c,cause){ if(c.lost) return; c.lost=true; world.stats.criasLost++;
+  world.mama.stress=clamp(world.mama.stress+25,0,100); world.stats.cleanCrossing=false; score(-40);
+  Sound.lose(); vibrate([40,60,40]); showPill(LOSS_MESSAGES[cause]||"Cada cria cuenta para el futuro de la especie.");
+  world.covers.push(new Cover(c.gx,c.gy,2)); }
+function score(n){ if(!world) return; world.scoreVal=(world.scoreVal||0)+n; }
+
+/* ------- DOM ------- */
+const $=id=> document.getElementById(id);
+const screens=["menu","levels","settings","how","album","intro","pause","results","gameover"];
+function showScreen(name){ screens.forEach(s=> $(s).classList.toggle("hidden", s!==name)); $("gameUI").style.display=(name===null)?"block":"none"; }
+let pillTimer=null;
+function showPill(msg,ms=2600){ const p=$("pill"); p.textContent=msg; p.classList.add("show"); clearTimeout(pillTimer); pillTimer=setTimeout(()=>p.classList.remove("show"),ms); }
+function flash(){ const f=$("flash"); f.style.transition="none"; f.style.opacity="0.7"; requestAnimationFrame(()=>{ f.style.transition="opacity .35s"; f.style.opacity="0"; }); }
+let floaters=[];
+function showFloating(txt,x,y){ floaters.push({txt,x,y,t:1}); }
+
+/* ------- ENTRADAS ------- */
+let pointerDown=false, lastTap=0, holdTimer=null;
+function canvasToScreen(cx,cy){ const rect=canvas.getBoundingClientRect(); return { x:(cx-rect.left)/rect.width*W, y:(cy-rect.top)/rect.height*H }; }
+canvas.addEventListener("pointerdown", e=>{ if(gameState!==GS.PLAY) return; Sound.resume(); pointerDown=true;
+  const s=canvasToScreen(e.clientX,e.clientY); const w=unproj(s.x,s.y); world.mama.setTargetWorld(w.gx,w.gy);
+  if(now()-lastTap<300) world.mama.dash=0.35; lastTap=now();
+  holdTimer=setTimeout(()=>{ if(pointerDown) world.mama.walk=true; },350); });
+canvas.addEventListener("pointermove", e=>{ if(!pointerDown||gameState!==GS.PLAY) return; const s=canvasToScreen(e.clientX,e.clientY); const w=unproj(s.x,s.y); world.mama.setTargetWorld(w.gx,w.gy); });
+function endPointer(){ pointerDown=false; if(world) world.mama.walk=false; clearTimeout(holdTimer); }
+canvas.addEventListener("pointerup",endPointer); canvas.addEventListener("pointercancel",endPointer); canvas.addEventListener("pointerleave",endPointer);
+
+const dpad={x:0,y:0}; const dpadHeld={};
+function recalcDpad(){ dpad.x=(dpadHeld.r?1:0)-(dpadHeld.l?1:0); dpad.y=(dpadHeld.d?1:0)-(dpadHeld.u?1:0); }
+function bindDbtn(sel,key){ const el=document.querySelector(sel); if(!el) return;
+  const on=e=>{ e.preventDefault(); dpadHeld[key]=true; recalcDpad(); el.classList.add("act"); Sound.resume(); };
+  const off=e=>{ dpadHeld[key]=false; recalcDpad(); el.classList.remove("act"); };
+  el.addEventListener("pointerdown",on); el.addEventListener("pointerup",off); el.addEventListener("pointerleave",off); el.addEventListener("pointercancel",off); }
+bindDbtn('.dbtn.du','u'); bindDbtn('.dbtn.dd','d'); bindDbtn('.dbtn.dl','l'); bindDbtn('.dbtn.dr','r');
+$("dpadStop").addEventListener("pointerdown",e=>{ e.preventDefault(); if(gameState===GS.PLAY){ world.mama.setTargetWorld(world.mama.gx,world.mama.gy); } });
+function setDpadVisible(v){ $("dpad").classList.toggle("show",v); $("dpadToggle").classList.toggle("on",v); persist.settings.dpad=v; commit(); }
+$("dpadToggle").addEventListener("click",()=> setDpadVisible(!persist.settings.dpad));
+
+$("btnLlamar").addEventListener("click",()=>{ if(gameState!==GS.PLAY) return; Sound.call(); vibrate(20); world.stopOrder=false;
+  for(const c of world.crias){ if(!c.lost){ c.state="follow"; c.distract=0; c.rezagadaT=0; } } showPill("📣 Llamado: las crias se reagrupan.",1400); score(2); });
+$("btnDetener").addEventListener("click",()=>{ if(gameState!==GS.PLAY) return; world.stopOrder=!world.stopOrder; vibrate(15); showPill(world.stopOrder?"✋ Crias detenidas.":"▶️ Crias liberadas.",1200); });
+$("btnRefugio").addEventListener("click",()=>{ if(gameState!==GS.PLAY) return; vibrate(15); for(const c of world.crias){ if(!c.lost) c.state="hide"; } showPill("🌿 Al refugio: las crias buscan vegetacion densa.",1400); });
+$("pauseBtn").addEventListener("click",()=>{ if(gameState===GS.PLAY){ gameState=GS.PAUSE; showScreen("pause"); } });
+
+/* ------- MENUS ------- */
+$("playBtn").addEventListener("click",()=>{ persist.survivors=[]; commit(); startLevelIntro(persist.unlockedLevel||1); });
+$("continueBtn").addEventListener("click",()=> openLevels());
+$("albumBtn").addEventListener("click",()=> openAlbum());
+$("settingsBtn").addEventListener("click",()=> openSettings());
+$("howBtn").addEventListener("click",()=> showScreen("how"));
+$("howBack").addEventListener("click",()=> showScreen("menu"));
+$("levelsBack").addEventListener("click",()=> showScreen("menu"));
+$("settingsBack").addEventListener("click",()=>{ commit(); showScreen("menu"); });
+$("albumBack").addEventListener("click",()=> showScreen("menu"));
+$("introBack").addEventListener("click",()=> showScreen("menu"));
+$("introStart").addEventListener("click",()=> startPlay());
+$("resumeBtn").addEventListener("click",()=>{ gameState=GS.PLAY; showScreen(null); });
+$("restartBtn").addEventListener("click",()=>{ buildLevel(world.level.id); gameState=GS.PLAY; showScreen(null); });
+$("quitBtn").addEventListener("click",()=> showScreen("menu"));
+$("resultsMenuBtn").addEventListener("click",()=> showScreen("menu"));
+$("replayBtn").addEventListener("click",()=> startLevelIntro(world.level.id));
+$("nextBtn").addEventListener("click",()=>{ const nx=Math.min(LEVELS.length, world.level.id+1); if(world.level.id>=LEVELS.length) showScreen("menu"); else startLevelIntro(nx); });
+$("goRetry").addEventListener("click",()=> startLevelIntro(world.level.id));
+$("goMenu").addEventListener("click",()=> showScreen("menu"));
+
+function openLevels(){ const list=$("levelList"); list.innerHTML="";
+  LEVELS.forEach(L=>{ const unlocked=L.id<=(persist.unlockedLevel||1); const best=persist.bestScores[L.id];
+    const row=document.createElement("div"); row.className="opt";
+    row.innerHTML='<div><b>'+L.id+'. '+L.name+'</b><div class="desc">'+(unlocked?(best?("Mejor ISC: "+best):"Disponible"):"🔒 Bloqueado")+'</div></div>';
+    const btn=document.createElement("button"); btn.className="menu ghost"; btn.style.minWidth="90px"; btn.textContent=unlocked?"Jugar":"🔒"; btn.disabled=!unlocked;
+    btn.onclick=()=>{ persist.survivors=[]; commit(); startLevelIntro(L.id); }; row.appendChild(btn); list.appendChild(row); });
+  showScreen("levels"); }
+
+function openSettings(){ const s=persist.settings; const list=$("settingsList"); list.innerHTML="";
+  const toggle=(key,label,desc,cb)=>{ const row=document.createElement("div"); row.className="opt";
+    row.innerHTML='<div><b>'+label+'</b><div class="desc">'+desc+'</div></div>';
+    const t=document.createElement("button"); t.className="toggle"+(s[key]?" on":""); t.innerHTML='<span class="knob"></span>';
+    t.onclick=()=>{ s[key]=!s[key]; t.classList.toggle("on",s[key]); commit(); if(cb) cb(s[key]); }; row.appendChild(t); list.appendChild(row); };
+  toggle("dpad","Control en cruz","Muestra un D-pad direccional ademas del arrastre.",(v)=>setDpadVisible(v));
+  toggle("sound","Sonido","Efectos y musica sintetizada.");
+  toggle("vibrate","Vibracion","Aviso haptico en peligros y perdidas.");
+  toggle("childMode","Modo infantil","Vehiculos lentos, sin cazadores, crias que regresan al bosque.");
+  toggle("eduMode","Modo educativo","Sin puntaje competitivo ni cazadores; repite sin penalizacion.");
+  toggle("highContrast","Alto contraste","Refuerza bordes y color de peligros.");
+  const drow=document.createElement("div"); drow.className="opt"; drow.innerHTML='<div><b>Dificultad</b><div class="desc">Ritmo del transito y de las amenazas.</div></div>';
+  const seg=document.createElement("div"); seg.className="seg";
+  [["suave","Suave"],["normal","Normal"],["reto","Reto"]].forEach(([k,lbl])=>{ const b=document.createElement("button"); b.textContent=lbl; b.className=s.difficulty===k?"sel":""; b.onclick=()=>{ s.difficulty=k; commit(); openSettings(); }; seg.appendChild(b); });
+  drow.appendChild(seg); list.appendChild(drow);
+  const grow=document.createElement("div"); grow.className="opt"; grow.innerHTML='<div><b>Velocidad del juego</b><div class="desc">Para reacciones mas comodas.</div></div>';
+  const seg2=document.createElement("div"); seg2.className="seg";
+  [[0.75,"Lenta"],[1,"Normal"],[1.25,"Rapida"]].forEach(([k,lbl])=>{ const b=document.createElement("button"); b.textContent=lbl; b.className=s.gameSpeed===k?"sel":""; b.onclick=()=>{ s.gameSpeed=k; commit(); openSettings(); }; seg2.appendChild(b); });
+  grow.appendChild(seg2); list.appendChild(grow); showScreen("settings"); }
+
+function openAlbum(){ const grid=$("albumGrid"); grid.innerHTML="";
+  CELEBRATIONS.forEach(c=>{ const unlocked=persist.album[c.id]; const it=document.createElement("div"); it.className="album-item"+(unlocked?"":" locked");
+    it.innerHTML='<span class="em">'+(unlocked?c.em:"🔒")+'</span>'+(unlocked?c.label:"Por descubrir"); grid.appendChild(it); });
+  showScreen("album"); }
+
+/* ------- NIVELES ------- */
+function startLevelIntro(levelIdx){ const L=LEVELS[levelIdx-1];
+  $("introTitle").textContent="Nivel "+L.id+": "+L.name; $("introDesc").textContent=L.desc;
+  const goals=[]; if(L.goals.minCrias>0) goals.push("🦌 Proteger al menos "+L.goals.minCrias+" dantica(s)");
+  goals.push("🍃 Comer "+L.goals.minFood+" alimento(s)"); if(L.goals.minSeeds>0) goals.push("🌱 Dispersar "+L.goals.minSeeds+" semilla(s)");
+  goals.push("🎯 Llegar al bosque protegido (derecha) con Mama Danta");
+  $("introGoals").innerHTML='<b>Objetivos</b><ul style="margin:8px 0 4px;padding-left:20px;">'+goals.map(x=>'<li>'+x+'</li>').join("")+'</ul>'+(L.tips?'<div style="margin-top:8px;color:var(--sepia);font-size:13px;">💡 '+L.tips.join(" · ")+'</div>':"");
+  buildLevel(L.id); gameState=GS.INTRO; showScreen("intro"); if(persist.settings.dpad) setDpadVisible(true); updateHUD(); }
+function startPlay(){ gameState=GS.PLAY; showScreen(null); Sound.resume(); showPill(world.level.tips?world.level.tips[0]:"A cruzar con cuidado!",2800); }
+
+function finishLevel(){ if(world.done) return; world.done=true;
+  const survivors=world.crias.filter(c=>!c.lost); const st=world.stats;
+  survivors.forEach(c=>{ c.levelsSurvived++; if(c.levelsSurvived%2===0 && c.stage<2){ c.stage++; st.grew++; } });
+  const base=100, perCria=60;
+  const criaBonus=survivors.length*perCria;
+  const noDmgBonus=survivors.filter(c=>c.noDamage).length*20;
+  const fullGroup=(world.startSurvivors>0 && survivors.length>=world.startSurvivors)?150:0;
+  const cleanBonus=st.cleanCrossing?80:0;
+  let total=(world.scoreVal||0)+base+criaBonus+noDmgBonus+fullGroup+cleanBonus+st.faunaUses*15+st.seedsDispersed*10;
+  total=Math.max(0,Math.round(total));
+  const badges=[];
+  if(world.startSurvivors>0 && survivors.length===world.startSurvivors) badges.push("👨‍👩‍👧 Familia completa");
+  if(st.cleanCrossing && world.startSurvivors>0) badges.push("✨ Cruce perfecto");
+  if(st.faunaUses>0 && st.criasLost===0) badges.push("🌉 Por el camino seguro");
+  if(st.seedsDispersed>=3) badges.push("🌳 Bosque futuro");
+  if(survivors.some(c=>c.levelsSurvived>=3)) badges.push("🏅 Familia veterana");
+  if(world.hunters.length>0 && st.criasLost===0) badges.push("🛡️ Guardiana del bosque");
+  if(survivors.some(c=>c.stage>=2)) badges.push("🌟 Tres generaciones");
+  let cel; if(survivors.length===0) cel=null;
+  else if(world.startSurvivors>0 && survivors.length>=world.startSurvivors) cel=pick(CELEBRATIONS);
+  else if(survivors.length===1) cel=CELEBRATIONS.find(c=>c.id==="toque"); else cel=pick(CELEBRATIONS);
+  if(cel) unlockAlbum(cel.id);
+  persist.survivors=survivors.map(c=>({persKey:c.persKey,stage:c.stage,levelsSurvived:c.levelsSurvived,faunaUses:c.faunaUses,name:c.name}));
+  persist.unlockedLevel=Math.max(persist.unlockedLevel||1, Math.min(LEVELS.length, world.level.id+1));
+  if(!persist.settings.eduMode){ if(!persist.bestScores[world.level.id] || total>persist.bestScores[world.level.id]) persist.bestScores[world.level.id]=total; }
+  persist.level=world.level.id; commit();
+  renderResults(total,survivors,badges,cel); Sound.celebrate(); gameState=GS.RESULT; }
+function renderResults(total,survivors,badges,cel){ const st=world.stats;
+  $("resultTitle").textContent=survivors.length===0?"Nivel superado":"Nivel superado!";
+  const row=(k,v)=>'<div class="k">'+k+'</div><div class="v">'+v+'</div>';
+  $("resultGrid").innerHTML=
+    row("Danticas al inicio",world.startSurvivors)+row("Sobrevivientes",survivors.length)+
+    row("Sin dano",survivors.filter(c=>c.noDamage).length)+row("Alimento",st.foodEaten)+
+    row("Semillas",st.seedsDispersed)+row("Cruces seguros",st.safeCrossings)+
+    row("Pasos de fauna",st.faunaUses)+row("Crecieron",st.grew)+
+    (persist.settings.eduMode?"":'<div class="total"><span>Indice ISC</span><span>'+total+'</span></div>');
+  $("resultBadges").innerHTML=badges.map(b=>'<span class="badge">'+b+'</span>').join("");
+  let msg; if(survivors.length===0) msg="La supervivencia de cada cria es importante para el futuro de la especie. En el siguiente nivel habra nuevas oportunidades.";
+  else if(world.startSurvivors>0 && survivors.length===world.startSurvivors) msg="Familia completa! Cada cria que crece fortalece a la poblacion.";
+  else msg="Cada cria sobreviviente cuenta. La paciencia protege al grupo.";
+  $("resultMsg").textContent=msg; $("nextBtn").textContent=world.level.id>=LEVELS.length?"Fin del corredor 🌳":"Siguiente nivel";
+  showScreen("results"); runCelebration(survivors.length,cel); }
+
+let celebration=null;
+function runCelebration(nSurv,cel){ celebration={t:0,n:nSurv,cel,serene:nSurv===0}; }
+function drawCelebration(g){ if(!celebration) return; const c=celebration; const cx=W*0.5, cy=H*0.60;
+  const bob=Math.sin(c.t*4)*(c.serene?1:4);
+  drawTapir3D(g,cx,cy+bob,16,1,{calf:false,mood:"feliz",pose:"celebrate",animTime:c.t*2,night:false,depth:1});
+  for(let i=0;i<c.n;i++){ const a=c.t*(c.serene?0.6:2)+i*(TAU/Math.max(1,c.n)); const rr=c.serene?60:80+Math.sin(c.t*3+i)*10;
+    const x=cx+Math.cos(a)*rr, y=cy+Math.sin(a)*rr*0.45; drawTapir3D(g,x,y,9,Math.cos(a)>=0?1:-1,{calf:true,mood:"feliz",pose:"play",animTime:c.t*2+ i,night:false,depth:0.8}); }
+  if(c.serene){ g.fillStyle="rgba(201,214,196,.9)"; g.font="15px system-ui"; g.textAlign="center"; g.fillText("🌱 El bosque espera nuevas crias",cx,cy+90); } }
+
+/* ------- HUD ------- */
+function updateHUD(){ if(!world||!world.mama) return; const m=world.mama;
+  $("barEnergy").style.width=m.energy+"%"; $("barHealth").style.width=m.health+"%"; $("barStress").style.width=m.stress+"%";
+  const alive=world.crias.filter(c=>!c.lost).length;
+  $("criasCount").textContent=alive+"/"+world.startSurvivors;
+  $("scoreVal").textContent=persist.settings.eduMode?"—":Math.max(0,Math.round(world.scoreVal||0));
+  const g=world.goals;
+  $("goalText").textContent="🎯 A la derecha con "+(g.minCrias>0?g.minCrias+" crias":"Mama Danta");
+  $("goalSub").textContent="🍃 "+world.stats.foodEaten+"/"+g.minFood+" · 🌱 "+world.stats.seedsDispersed+"/"+(g.minSeeds||0);
+  $("btnLlamar").disabled=alive===0; $("btnDetener").disabled=alive===0; $("btnRefugio").disabled=alive===0; }
+
+/* ------- BUCLE ------- */
+let lastT=now(), acc=0; const STEP=1/60;
+function loop(){ const t=now(); let dt=(t-lastT)/1000; lastT=t; dt=Math.min(dt,0.05);
+  const gs=persist.settings.gameSpeed||1;
+  if(gameState===GS.PLAY){ acc+=dt*gs; let guard=0; while(acc>=STEP && guard<6){ update(STEP); acc-=STEP; guard++; } if(acc>0.2) acc=0; }
+  // Actualizar cámara
+  if(world){
+    let avgX=0, avgY=0, count=0;
+    avgX += world.mama.gx; avgY += world.mama.gy; count++;
+    for(const c of world.crias){ if(!c.lost){ avgX += c.gx; avgY += c.gy; count++; } }
+    avgX /= count; avgY /= count;
+    const wx = ORIGIN.x + avgX*EX.x + avgY*EY.x;
+    const wy = ORIGIN.y + avgX*EX.y + avgY*EY.y;
+    camera.targetX = wx;
+    camera.targetY = wy;
+  }
+  camera.x += (camera.targetX - camera.x) * 0.08;
+  camera.y += (camera.targetY - camera.y) * 0.06;
+  camera.zoom += (camera.targetZoom - camera.zoom) * 0.04;
+
+  if(celebration && gameState===GS.RESULT) celebration.t+=dt;
+  render(); requestAnimationFrame(loop); }
+
+/* ------- UPDATE ------- */
+function update(dt){ const w=world, m=w.mama; w.elapsed+=dt;
+  if(dpad.x||dpad.y){ m.setTargetWorld(m.gx+dpad.x*18, m.gy+dpad.y*18); }
+  if(w.fog>0) w.fogActive=(Math.sin(w.elapsed*0.25)*0.5+0.5)<w.fog;
+  m.update(dt);
+  const p=nearestPlant(m.gx,m.gy,true);
+  if(p && dist(m.gx,m.gy,p.gx,p.gy)<p.r+m.r && p.stage>=1){ const gain=p.nibble(dt);
+    if(gain>0){ m.energy=clamp(m.energy+gain,0,100); w.stats.foodEaten++; Sound.eat(); score(6); const sp=proj(m.gx,m.gy); showFloating("🍃 +"+gain,sp.x,sp.y-30); } m.eating=0.3; }
+  for(const wt of w.waters){ if(dist(m.gx,m.gy,wt.gx,wt.gy)<wt.r) m.stress=clamp(m.stress-dt*12,0,100); }
+  w.crias.forEach((c,i)=> c.update(dt,m,i));
+  w.crias.forEach(c=>{ if(!c.lost && c._wasOnRoad && c.gx>GX_ROAD_B){ c._wasOnRoad=false;
+      if(inFaunaPass(c.gy)){ c.faunaUses++; w.stats.faunaUses++; score(8); } else { w.stats.safeCrossings++; score(4); } }
+    if(!c.lost) c._wasOnRoad=onRoadGx(c.gx); });
+  w.trafficTimer-=dt;
+  if(w.trafficTimer<=0){ for(let k=0;k<w.trafficDensity;k++) if(Math.random()<0.85) spawnVehicle(); w.trafficTimer=w.trafficInterval*rand(1.3,0.7); }
+  for(const v of w.vehicles) v.update(dt); w.vehicles=w.vehicles.filter(v=>!v.offscreen());
+  if(onRoadGx(m.gx) && !inFaunaPass(m.gy)){ for(const v of w.vehicles){
+    if(Math.abs(m.gx-v.gx)<v.hw+m.r && Math.abs(m.gy-v.gy)<v.hl+m.r){
+      m.health=clamp(m.health-24,0,100); m.stress=clamp(m.stress+30,0,100); m.shake=0.4; flash(); Sound.car(); vibrate([60,40,60]);
+      w.stats.cleanCrossing=false; score(-25);
+      const push=m.gx<(GX_ROAD_A+GX_ROAD_B)/2?GX_LEFT_END-3:GX_RIGHT_START+3; m.tx=push; m.gx=lerp(m.gx,push,0.4); v.curSpeed*=0.3; break; } } }
+  for(const pl of w.plants) pl.update(dt);
+  for(const s of w.seeds) s.update(dt); w.seeds=w.seeds.filter(s=>s.t>0);
+  for(const h of w.hunters) h.update(dt);
+  if(w.level.criasSpawn>0 && w.spawnedExtra<w.level.criasSpawn){ w.spawnCriaCd-=dt;
+    if(w.spawnCriaCd<=0 && m.gx>GX_RIGHT_START-6){ spawnExtraCria(); w.spawnedExtra++; w.spawnCriaCd=15; } }
+  const g=w.goals; const alive=w.crias.filter(c=>!c.lost).length;
+  const criasOk=alive>=g.minCrias, foodOk=w.stats.foodEaten>=g.minFood, seedOk=w.stats.seedsDispersed>=(g.minSeeds||0);
+  if(m.gx>GX_RIGHT_START+1 && foodOk && seedOk && criasOk && !w.done){
+    const laggards=w.crias.filter(c=>!c.lost && c.gx<GX_ROAD_B);
+    if(laggards.length===0) finishLevel(); else showPill("Espera a que todo el grupo cruce.",1400); }
+  if(m.health<=0 || (m.energy<=0 && m.health<20) || (m.stress>=100 && m.health<15)) triggerGameOver();
+  updateHUD(); }
+function spawnExtraCria(){ const pk=pick(PERS_KEYS); const c=new Dantica(pk,0); c.gx=clamp(world.mama.gx-3,2,98); c.gy=world.mama.gy+rand(4,-4);
+  world.crias.push(c); world.startSurvivors++; world.stats.criasRescued++; showPill("🦌 Una nueva dantica se une al grupo.",1800); Sound.pass(); }
+function triggerGameOver(){ if(world.done) return; world.done=true; gameState=GS.GAMEOVER;
+  $("gameoverMsg").textContent="Mama Danta quedo demasiado expuesta. Un bosque conectado y conductores atentos hacen los cruces mas seguros. Intentalo de nuevo con mas calma.";
+  showScreen("gameover"); Sound.soft(); vibrate(120); }
+
+/* ------- RENDER ------- */
+function drawShadow(g,gx,gy,rw){ const p=proj(gx,gy); g.save(); g.globalAlpha=0.22; g.fillStyle="#000";
+  g.beginPath(); g.ellipse(p.x,p.y, rw*ROAD_PX_PER_U*1.05, rw*ROAD_PX_PER_U*0.5, 0,0,TAU); g.fill(); g.restore(); }
+
+function fillGround(g,ax,bx,col){ const c=[proj(ax,0),proj(bx,0),proj(bx,100),proj(ax,100)];
+  g.fillStyle=col; g.beginPath(); g.moveTo(c[0].x,c[0].y); for(let i=1;i<4;i++) g.lineTo(c[i].x,c[i].y); g.closePath(); g.fill(); }
+
+function drawFogLayers(g,time,alpha){ const layers=[{speed:0.06,alpha:0.10,scale:1.8},{speed:0.12,alpha:0.08,scale:1.3},{speed:0.22,alpha:0.06,scale:0.9}];
+  for(const l of layers){ const ox=Math.sin(time*l.speed)*100, oy=Math.cos(time*l.speed*0.7)*50;
+    g.save(); g.globalAlpha=l.alpha*alpha; const grd=g.createRadialGradient(W*0.5+ox,H*0.5+oy,10,W*0.5+ox,H*0.5+oy,300*l.scale);
+    grd.addColorStop(0,"#c9d6c4"); grd.addColorStop(1,"rgba(201,214,196,0)"); g.fillStyle=grd; g.fillRect(0,0,W,H); g.restore(); } }
+
+function render(){ const g=ctx; g.clearRect(0,0,W,H);
+  // Fondo (cielo y montañas) con parallax
+  const skyGrad=g.createLinearGradient(0,0,0,H*0.5); skyGrad.addColorStop(0,world&&world.night?"#0b1814":"#9bb8a4"); skyGrad.addColorStop(1,world&&world.night?"#14241d":"#6b8f72"); g.fillStyle=skyGrad; g.fillRect(0,0,W,H);
+  // Montañas lejanas con desplazamiento
+  const mOff = camera.x * 0.05;
+  g.fillStyle="rgba(70,90,75,0.5)"; g.beginPath(); g.moveTo(0,H*0.3); for(let x=0;x<=W;x+=20){ const y=H*0.2+Math.sin((x+mOff)*0.01+1)*30+Math.sin((x+mOff)*0.025+2)*20; g.lineTo(x,y); } g.lineTo(W,H*0.5); g.lineTo(0,H*0.5); g.closePath(); g.fill();
+  // Capas de bosque con parallax
+  const time=world?world.elapsed:0;
+  const px=world?world.mama.gx:0;
+  for(let layer=0;layer<3;layer++){ const speed=[0.05,0.15,0.35][layer]; const alpha=[0.1,0.2,0.4][layer];
+    const off=px*speed*4 - camera.x*0.2; g.globalAlpha=alpha; g.fillStyle="#2a4a34";
+    for(let i=0;i<12;i++){ const bx=(i*70+off)%(W+100)-50; const bh=40+Math.sin(i*2.3+1.2)*15+20; g.fillRect(bx,H*0.45-bh,40,bh); } }
+  g.globalAlpha=1;
+  // Suelo y carretera
+  if(world){
+    fillGround(g,0,GX_LEFT_END,"#284b34");
+    fillGround(g,GX_LEFT_END,GX_ROAD_A,"#3a5540");
+    const roadCol=world.rain>0.3?"#2b2f33":"#34383c";
+    fillGround(g,GX_ROAD_A,GX_ROAD_B,roadCol);
+    fillGround(g,GX_ROAD_B,GX_RIGHT_START,"#3a5540");
+    fillGround(g,GX_RIGHT_START,100,"#254832");
+    // Líneas de carril
+    g.strokeStyle="rgba(230,220,180,.5)"; g.lineWidth=2; g.setLineDash([10,9]);
+    [49.5,56.5].forEach(gx=>{ const s=proj(gx,0), e=proj(gx,100); g.beginPath(); g.moveTo(s.x,s.y); g.lineTo(e.x,e.y); g.stroke(); });
+    g.setLineDash([]);
+    g.strokeStyle="rgba(255,255,255,.35)"; g.lineWidth=2;
+    [GX_ROAD_A,GX_ROAD_B].forEach(gx=>{ const s=proj(gx,0), e=proj(gx,100); g.beginPath(); g.moveTo(s.x,s.y); g.lineTo(e.x,e.y); g.stroke(); });
+    // Pasos de fauna
+    for(const fy of world.faunaGy){ const c=[proj(GX_ROAD_A-1,fy-6),proj(GX_ROAD_B+1,fy-6),proj(GX_ROAD_B+1,fy+6),proj(GX_ROAD_A-1,fy+6)];
+      g.fillStyle="rgba(60,138,76,.9)"; g.beginPath(); g.moveTo(c[0].x,c[0].y); for(let i=1;i<4;i++) g.lineTo(c[i].x,c[i].y); g.closePath(); g.fill();
+      g.fillStyle="rgba(44,104,58,.95)"; for(let gx=GX_ROAD_A; gx<=GX_ROAD_B; gx+=3){ const q=proj(gx,fy+rand(4,-4)); g.beginPath(); g.arc(q.x,q.y,4,0,TAU); g.fill(); }
+      const s=proj(GX_ROAD_A-2,fy); g.font="14px system-ui"; g.textAlign="center"; g.fillText("🌉",s.x,s.y); }
+    // Agua
+    for(const wt of world.waters) wt.draw(g);
+    // Orden por profundidad
+    const items=[];
+    for(const c of world.covers) items.push(c);
+    for(const pl of world.plants) items.push(pl);
+    for(const t of world.traps) items.push(t);
+    for(const h of world.hunters) items.push(h);
+    for(const v of world.vehicles) items.push(v);
+    for(const c of world.crias){ if(!c.lost) items.push(c); }
+    items.push(world.mama);
+    items.sort((a,b)=> a.feet()-b.feet());
+    for(const it of items) it.draw(g);
+    for(const s of world.seeds) s.draw(g);
+    // Niebla
+    if(world.fogActive || world.fog>0){ drawFogLayers(g,time,world.fogActive?0.5:world.fog*0.4); }
+    if(world.night){ g.fillStyle="rgba(6,10,20,.42)"; g.fillRect(0,0,W,H); }
+    if(gameState===GS.RESULT) drawCelebration(g);
+    floaters.forEach(f=>{ f.y-=0.7; f.t-=0.02; g.globalAlpha=clamp(f.t,0,1); g.fillStyle="#f2efe4"; g.font="bold 15px system-ui"; g.textAlign="center"; g.fillText(f.txt,f.x,f.y); g.globalAlpha=1; });
+    floaters=floaters.filter(f=>f.t>0);
+  }
+}
+
+/* ------- ARRANQUE ------- */
+if(persist.settings.dpad) setDpadVisible(true);
+showScreen("menu");
+requestAnimationFrame(loop);
+if("serviceWorker" in navigator){ window.addEventListener("load",()=>{ navigator.serviceWorker.register("./sw.js").catch(()=>{}); }); }
+</script>
+</body>
+</html>
