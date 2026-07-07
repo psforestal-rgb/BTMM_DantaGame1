@@ -90,3 +90,5 @@ jobs:
           git add index.html
           git commit -m "Ajustar dantas y vista tipo smartphone en escritorio"
           git push
+
+# Activación intencional del flujo tras su creación inicial.
