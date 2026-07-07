@@ -1,7 +1,7 @@
-const CACHE_NAME = "danta-cruce-v3-mobile";
-const PATCHED_INDEX_KEY = "./__danta_patched_index_v3__.html";
-const ASSETS = [
-  "./index.html",
+const RELEASE_ID = "2026.07.06.4";
+const CACHE_NAME = `danta-cruce-${RELEASE_ID}`;
+const PATCHED_INDEX_KEY = `./__danta_patched_index_${RELEASE_ID}.html`;
+const STATIC_ASSETS = [
   "./manifest.json",
   "./icon.svg"
 ];
@@ -30,6 +30,42 @@ const DESKTOP_MOBILE_FRAME_CSS = `
   }
 `;
 
+const ORIGINAL_SW_REGISTRATION = 'if("serviceWorker" in navigator){ window.addEventListener("load",()=>{ navigator.serviceWorker.register("./sw.js").catch(()=>{}); }); }';
+
+const FORCED_SW_REGISTRATION = `if("serviceWorker" in navigator){
+  window.addEventListener("load",async()=>{
+    const releaseId="${RELEASE_ID}";
+    const reloadKey="danta-release-reloaded-"+releaseId;
+    let registration=null;
+    let reloading=false;
+
+    navigator.serviceWorker.addEventListener("controllerchange",()=>{
+      if(reloading) return;
+      if(sessionStorage.getItem(reloadKey)==="1") return;
+      reloading=true;
+      sessionStorage.setItem(reloadKey,"1");
+      window.location.reload();
+    });
+
+    try{
+      registration=await navigator.serviceWorker.register(
+        "./sw.js?v="+encodeURIComponent(releaseId),
+        {updateViaCache:"none"}
+      );
+      await registration.update();
+
+      const checkForUpdate=()=>registration&&registration.update().catch(()=>{});
+      window.addEventListener("focus",checkForUpdate);
+      document.addEventListener("visibilitychange",()=>{
+        if(!document.hidden) checkForUpdate();
+      });
+      window.setInterval(checkForUpdate,5*60*1000);
+    }catch(error){
+      console.warn("No fue posible comprobar la versión más reciente del juego.",error);
+    }
+  });
+}`;
+
 function patchIndexHtml(source) {
   let html = source;
 
@@ -51,13 +87,25 @@ function patchIndexHtml(source) {
     "g.beginPath(); g.ellipse(0,s*0.12,s*0.75,s*0.24,0,0,TAU); g.fill(); g.restore();"
   );
 
+  if (html.includes(ORIGINAL_SW_REGISTRATION)) {
+    html = html.replace(ORIGINAL_SW_REGISTRATION, FORCED_SW_REGISTRATION);
+  }
+
+  html = html.replace(
+    "</head>",
+    `<meta name="danta-release" content="${RELEASE_ID}">\n</head>`
+  );
+
   return html;
 }
 
 function htmlResponse(html, sourceResponse) {
   const headers = new Headers(sourceResponse ? sourceResponse.headers : undefined);
   headers.set("content-type", "text/html; charset=utf-8");
-  headers.set("cache-control", "no-cache, no-store, must-revalidate");
+  headers.set("cache-control", "no-store, no-cache, must-revalidate, max-age=0");
+  headers.set("pragma", "no-cache");
+  headers.set("expires", "0");
+  headers.set("x-danta-release", RELEASE_ID);
   headers.delete("content-length");
   headers.delete("content-encoding");
   headers.delete("etag");
@@ -69,11 +117,21 @@ function htmlResponse(html, sourceResponse) {
   });
 }
 
+async function fetchFresh(url) {
+  const freshUrl = new URL(url);
+  freshUrl.searchParams.set("v", RELEASE_ID);
+  return fetch(freshUrl.href, {
+    cache: "reload",
+    credentials: "same-origin",
+    redirect: "follow"
+  });
+}
+
 async function servePatchedIndex() {
   const indexUrl = new URL("./index.html", self.registration.scope);
 
   try {
-    const networkResponse = await fetch(indexUrl.href, { cache: "no-store" });
+    const networkResponse = await fetchFresh(indexUrl);
     if (!networkResponse.ok) throw new Error(`HTTP ${networkResponse.status}`);
 
     const source = await networkResponse.text();
@@ -85,12 +143,6 @@ async function servePatchedIndex() {
     const cachedPatched = await caches.match(PATCHED_INDEX_KEY);
     if (cachedPatched) return cachedPatched;
 
-    const cachedSource = await caches.match("./index.html");
-    if (cachedSource) {
-      const source = await cachedSource.text();
-      return htmlResponse(patchIndexHtml(source), cachedSource);
-    }
-
     return new Response("No fue posible cargar el juego sin conexión.", {
       status: 503,
       headers: { "content-type": "text/plain; charset=utf-8" }
@@ -98,12 +150,31 @@ async function servePatchedIndex() {
   }
 }
 
+async function cacheStaticAssets() {
+  const cache = await caches.open(CACHE_NAME);
+
+  await Promise.all(STATIC_ASSETS.map(async asset => {
+    try {
+      const assetUrl = new URL(asset, self.registration.scope);
+      const response = await fetchFresh(assetUrl);
+      if (response.ok) await cache.put(asset, response);
+    } catch (error) {
+      // La aplicación sigue disponible aunque falle un recurso accesorio.
+    }
+  }));
+
+  try {
+    await servePatchedIndex();
+  } catch (error) {
+    // El índice se intentará nuevamente en la primera navegación.
+  }
+}
+
 self.addEventListener("install", event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(ASSETS))
-      .then(() => self.skipWaiting())
-  );
+  event.waitUntil((async () => {
+    await cacheStaticAssets();
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener("activate", event => {
@@ -112,16 +183,38 @@ self.addEventListener("activate", event => {
     await Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)));
     await self.clients.claim();
 
-    const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-    await Promise.all(clients.map(client => client.navigate(client.url).catch(() => null)));
+    const clients = await self.clients.matchAll({
+      type: "window",
+      includeUncontrolled: true
+    });
+
+    await Promise.all(clients.map(client =>
+      client.postMessage({ type: "DANTA_NEW_RELEASE", releaseId: RELEASE_ID })
+    ));
   })());
+});
+
+self.addEventListener("message", event => {
+  if (!event.data) return;
+
+  if (event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+
+  if (event.data.type === "GET_RELEASE" && event.source) {
+    event.source.postMessage({
+      type: "DANTA_RELEASE",
+      releaseId: RELEASE_ID
+    });
+  }
 });
 
 self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
 
   const url = new URL(event.request.url);
-  const isGameDocument = url.origin === self.location.origin &&
+  const sameOrigin = url.origin === self.location.origin;
+  const isGameDocument = sameOrigin &&
     (event.request.mode === "navigate" || url.pathname.endsWith("/index.html"));
 
   if (isGameDocument) {
@@ -129,15 +222,20 @@ self.addEventListener("fetch", event => {
     return;
   }
 
-  event.respondWith(
-    fetch(event.request)
-      .then(response => {
-        if (response && response.status === 200) {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+  if (sameOrigin) {
+    event.respondWith((async () => {
+      try {
+        const response = await fetch(event.request, { cache: "reload" });
+        if (response && response.ok) {
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put(event.request, response.clone());
         }
         return response;
-      })
-      .catch(() => caches.match(event.request))
-  );
+      } catch (error) {
+        const cached = await caches.match(event.request);
+        if (cached) return cached;
+        throw error;
+      }
+    })());
+  }
 });
