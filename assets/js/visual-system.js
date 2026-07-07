@@ -38,6 +38,15 @@
 
   window.BTMMVisual = api;
 
+  function loadGameExtensionSystem() {
+    if (window.BTMMGameExtensions || document.querySelector("script[data-btmm-game-extensions]")) return;
+    const script = document.createElement("script");
+    script.dataset.btmmGameExtensions = "true";
+    script.src = `./assets/js/game-extension-system.js?v=${encodeURIComponent(config.release || "current")}`;
+    script.async = false;
+    document.head.appendChild(script);
+  }
+
   function applyThemeClass() {
     const themeClass = config.themeClass || "btmm-theme-kawaii";
     document.documentElement.classList.add(themeClass);
@@ -46,6 +55,7 @@
 
   function install() {
     applyThemeClass();
+    loadGameExtensionSystem();
     if (installed) return true;
 
     const baseRenderer = window.drawTapir3D;
