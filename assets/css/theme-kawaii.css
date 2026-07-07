@@ -1,0 +1,105 @@
+:root.btmm-theme-kawaii,
+.btmm-theme-kawaii {
+  --btmm-ink: #342a28;
+  --btmm-cocoa: #716258;
+  --btmm-cream: #fff5e8;
+  --btmm-leaf: #65a96d;
+  --btmm-leaf-dark: #3d7650;
+  --btmm-amber: #f3b85f;
+  --btmm-blush: #eaa9a8;
+  --btmm-sky: #b9d9ca;
+}
+
+.btmm-theme-kawaii body,
+body.btmm-theme-kawaii {
+  background:
+    radial-gradient(circle at 50% 15%, rgba(185, 217, 202, .3), transparent 34%),
+    #101915;
+}
+
+.btmm-theme-kawaii .screen {
+  background:
+    radial-gradient(circle at 25% 18%, rgba(101, 169, 109, .18), transparent 28%),
+    radial-gradient(circle at 78% 78%, rgba(243, 184, 95, .12), transparent 30%),
+    linear-gradient(160deg, #20382a 0%, #111d17 100%);
+}
+
+.btmm-theme-kawaii h1 {
+  color: #fff8ed;
+  letter-spacing: .2px;
+  text-shadow:
+    0 3px 0 rgba(52, 42, 40, .8),
+    0 8px 22px rgba(0, 0, 0, .35);
+}
+
+.btmm-theme-kawaii .subtitle,
+.btmm-theme-kawaii .tagline {
+  color: #ead9c6;
+}
+
+.btmm-theme-kawaii .card,
+.btmm-theme-kawaii .results-grid,
+.btmm-theme-kawaii .album-item {
+  background: rgba(35, 54, 43, .92);
+  border: 2px solid rgba(255, 245, 232, .12);
+  border-radius: 22px;
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, .24),
+    inset 0 1px 0 rgba(255, 255, 255, .06);
+}
+
+.btmm-theme-kawaii button.menu {
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffd483, #f3b85f);
+  color: #443124;
+  box-shadow:
+    0 6px 0 #b87d2d,
+    0 12px 24px rgba(0, 0, 0, .24);
+}
+
+.btmm-theme-kawaii button.menu.ghost {
+  background: rgba(255, 245, 232, .06);
+  border: 2px solid rgba(255, 245, 232, .24);
+  color: #fff5e8;
+  box-shadow: none;
+}
+
+.btmm-theme-kawaii .bars,
+.btmm-theme-kawaii .goalbar,
+.btmm-theme-kawaii .chip,
+.btmm-theme-kawaii .crias-chip,
+.btmm-theme-kawaii .iconbtn,
+.btmm-theme-kawaii .dpad-toggle,
+.btmm-theme-kawaii .dbtn,
+.btmm-theme-kawaii .abtn {
+  background: rgba(31, 49, 39, .88);
+  border-color: rgba(255, 245, 232, .18);
+  box-shadow: 0 5px 14px rgba(0, 0, 0, .26);
+}
+
+.btmm-theme-kawaii .iconbtn,
+.btmm-theme-kawaii .abtn {
+  border-radius: 22px;
+}
+
+.btmm-theme-kawaii .pill {
+  background: linear-gradient(180deg, #ffd483, #f3b85f);
+  color: #443124;
+  border: 2px solid rgba(255, 255, 255, .22);
+}
+
+.btmm-theme-kawaii .badge {
+  background: rgba(243, 184, 95, .13);
+  border-color: #f3b85f;
+  color: #ffd483;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btmm-theme-kawaii *,
+  .btmm-theme-kawaii *::before,
+  .btmm-theme-kawaii *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
