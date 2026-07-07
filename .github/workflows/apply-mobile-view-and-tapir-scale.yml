@@ -1,0 +1,92 @@
+name: Aplicar vista móvil y escala de dantas
+
+on:
+  push:
+    paths:
+      - ".github/workflows/apply-mobile-view-and-tapir-scale.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  apply-adjustments:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Ajustar index.html
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("index.html")
+          text = path.read_text(encoding="utf-8")
+
+          replacements = [
+              (
+                  '  @media (orientation:portrait){ .rotate-hint{display:flex;} }',
+                  '''  /* En computadoras se conserva una ventana horizontal con proporción de smartphone. */
+  @media (min-width:900px) and (orientation:landscape){
+    html,body{
+      background:radial-gradient(circle at center,#203c2b 0%,#101915 48%,#070b09 100%);
+    }
+    #app{
+      inset:50% auto auto 50%;
+      width:min(94vw,1180px,calc(94vh * 1.863636));
+      height:auto;
+      aspect-ratio:820 / 440;
+      transform:translate(-50%,-50%);
+      border:10px solid #0d1511;
+      border-radius:30px;
+      overflow:hidden;
+      box-shadow:0 28px 70px rgba(0,0,0,.62),0 0 0 1px rgba(255,255,255,.08);
+    }
+    #game{width:100%!important;height:100%!important;}
+  }
+  @media (orientation:portrait){ .rotate-hint{display:flex;} }'''
+              ),
+              (
+                  'const W=820,H=440; canvas.width=W; canvas.height=H;',
+                  'const W=820,H=440; canvas.width=W; canvas.height=H;\nconst TAPIR_VISUAL_SCALE=58; // cuerpo visible ≈ 2 veces el diámetro de su sombra'
+              ),
+              (
+                  'g.beginPath(); g.ellipse(0,s*0.15,s*2.2,s*0.7,0,0,TAU); g.fill(); g.restore();',
+                  'g.beginPath(); g.ellipse(0,s*0.12,s*0.75,s*0.24,0,0,TAU); g.fill(); g.restore();'
+              ),
+              (
+                  'drawShadow(g,this.gx,this.gy,this.r);\n    drawTapir3D(g,p.x+sh,p.y,this.r*7.0,this.face,',
+                  'drawShadow(g,this.gx,this.gy,this.r*0.55);\n    drawTapir3D(g,p.x+sh,p.y,this.r*TAPIR_VISUAL_SCALE,this.face,'
+              ),
+              (
+                  'drawShadow(g,this.gx,this.gy,this.r);\n    drawTapir3D(g,p.x,p.y,this.r*7.0,this.face,',
+                  'drawShadow(g,this.gx,this.gy,this.r*0.55);\n    drawTapir3D(g,p.x,p.y,this.r*TAPIR_VISUAL_SCALE,this.face,'
+              ),
+              (
+                  'p.x,p.y-this.r*7.0*0.12*1.9',
+                  'p.x,p.y-this.r*TAPIR_VISUAL_SCALE*0.12*1.9'
+              ),
+          ]
+
+          for old, new in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"Se esperaba una coincidencia y se encontraron {count}: {old[:90]!r}")
+              text = text.replace(old, new, 1)
+
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Confirmar cambios en main
+        shell: bash
+        run: |
+          if git diff --quiet -- index.html; then
+            echo "No hubo cambios que confirmar."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Ajustar dantas y vista tipo smartphone en escritorio"
+          git push
